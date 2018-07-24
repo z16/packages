@@ -1,0 +1,9 @@
+<package>
+  <name>packet_viewer</name>
+  <version>1.0.0.0</version>
+  <type>addon</type>
+  <dependencies>
+    <dependency>packets</dependency>
+    <dependency>util</dependency>
+  </dependencies>
+</package>
