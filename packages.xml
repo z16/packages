@@ -1,0 +1,48 @@
+<packages>
+  <package>
+    <name>pv</name>
+    <version>1.0.0.0</version>
+    <type>addon</type>
+    <dependencies>
+      <dependency>packets</dependency>
+      <dependency>util</dependency>
+    </dependencies>
+    <files>
+      <file size="1342">pv/pv.lua</file>
+      <file size="204">pv/manifest.xml</file>
+    </files>
+  </package>
+  <package>
+    <name>v</name>
+    <version>1.0.0.0</version>
+    <type>addon</type>
+    <dependencies>
+      <dependency>memory</dependency>
+      <dependency>account</dependency>
+      <dependency>packets</dependency>
+      <dependency>player</dependency>
+      <dependency>settings</dependency>
+      <dependency>resources</dependency>
+      <dependency>target</dependency>
+      <dependency>entities</dependency>
+      <dependency>party</dependency>
+      <dependency>world</dependency>
+      <dependency>util</dependency>
+    </dependencies>
+    <files>
+      <file size="1036">v/v.lua</file>
+      <file size="542">v/manifest.xml</file>
+    </files>
+  </package>
+  <package>
+    <name>util</name>
+    <version>1.0.0.0</version>
+    <type>library</type>
+    <dependencies/>
+    <files>
+      <file size="7666">util/util.lua</file>
+      <file size="98">util/manifest.xml</file>
+    </files>
+  </package>
+</packages>
+
