@@ -1,5 +1,5 @@
 <package>
-  <name>packet_viewer</name>
+  <name>pv</name>
   <version>1.0.0.0</version>
   <type>addon</type>
   <dependencies>
