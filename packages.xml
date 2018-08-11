@@ -1,15 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <packages>
   <package>
-    <name>pv</name>
+    <name>insanity</name>
     <version>1.0.0.0</version>
+    <type>addon</type>
+    <dependencies>
+      <dependency>packets</dependency>
+      <dependency>account</dependency>
+      <dependency>player</dependency>
+      <dependency>equipment</dependency>
+      <dependency>items</dependency>
+    </dependencies>
+    <files>
+      <file size="109">insanity/insanity.lua</file>
+      <file size="569">insanity/login.lua</file>
+      <file size="51">insanity/main.lua</file>
+      <file size="326">insanity/manifest.xml</file>
+      <file size="261">insanity/test.lua</file>
+    </files>
+  </package>
+  <package>
+    <name>pv</name>
+    <version>1.0.1.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>packets</dependency>
       <dependency>util</dependency>
     </dependencies>
     <files>
-      <file size="1342">pv/pv.lua</file>
       <file size="204">pv/manifest.xml</file>
+      <file size="1173">pv/pv.lua</file>
+    </files>
+  </package>
+  <package>
+    <name>util</name>
+    <version>1.0.1.0</version>
+    <type>library</type>
+    <files>
+      <file size="98">util/manifest.xml</file>
+      <file size="8943">util/util.lua</file>
     </files>
   </package>
   <package>
@@ -17,32 +46,23 @@
     <version>1.0.0.0</version>
     <type>addon</type>
     <dependencies>
-      <dependency>memory</dependency>
       <dependency>account</dependency>
-      <dependency>packets</dependency>
-      <dependency>player</dependency>
-      <dependency>settings</dependency>
-      <dependency>resources</dependency>
-      <dependency>target</dependency>
       <dependency>entities</dependency>
+      <dependency>equipment</dependency>
+      <dependency>linkshell</dependency>
+      <dependency>memory</dependency>
+      <dependency>packets</dependency>
       <dependency>party</dependency>
-      <dependency>world</dependency>
+      <dependency>player</dependency>
+      <dependency>resources</dependency>
+      <dependency>settings</dependency>
+      <dependency>target</dependency>
       <dependency>util</dependency>
+      <dependency>world</dependency>
     </dependencies>
     <files>
-      <file size="1036">v/v.lua</file>
-      <file size="542">v/manifest.xml</file>
-    </files>
-  </package>
-  <package>
-    <name>util</name>
-    <version>1.0.0.0</version>
-    <type>library</type>
-    <dependencies/>
-    <files>
-      <file size="7666">util/util.lua</file>
-      <file size="98">util/manifest.xml</file>
+      <file size="622">v/manifest.xml</file>
+      <file size="1092">v/v.lua</file>
     </files>
   </package>
 </packages>
-
