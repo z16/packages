@@ -4,20 +4,15 @@ local util = require('util')
 local os = require('os')
 
 local pprint = function(packet)
+    local info = packet._info
     print()
     print()
     print()
-    print(('%s 0x%03X, at %s'):format(packet.direction, packet.id, os.date('%c')))
-    print(util.str_hex_table(packet.data))
+    print(('%s 0x%03X, at %s'):format(info.direction, info.id, os.date('%c')))
+    print(util.hex_table(info.data))
 
-    packet.id = nil
-    packet.direction = nil
     local payload = packet.data
-    packet.data = nil
-    packet.modified = nil
-    packet.injected = nil
-    packet.blocked = nil
-    packet.timestamp = nil
+    packet._info = nil
     util.vprint(packet)
 end
 
@@ -51,5 +46,3 @@ pv:register('t', function(dir, ...)
         p:register(pprint)
     end
 end, '<dir:one_of(i,o)> <ids:multi_int>*')
-
-command.input('/pv t i 0x01B')

@@ -1,16 +1,17 @@
-local ui = require('ui')
 local string = require('string')
+local ui = require('ui')
 local util = require('util')
 
 account = require('account')
-target = require('target')
+equipment = require('equipment')
+linkshell = require('linkshell')
 memory = require('memory')
-world = require('world')
 player = require('player')
+target = require('target')
+world = require('world')
 
 local expressions = {
-    'account',
-    'world',
+    'equipment',
     'player',
 }
 

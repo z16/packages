@@ -1,10 +1,15 @@
-local table = require('table')
-local string = require('string')
+local bit = require('bit')
 local ffi = require('ffi')
+local string = require('string')
+local table = require('table')
 
 local util = {}
 
 do
+    local string_byte = string.byte
+    local string_find = string.find
+    local string_format = string.format
+    local string_sub = string.sub
     local table_sort = table.sort
     local table_concat = table.concat
 
@@ -23,9 +28,19 @@ do
         lines[1] = indent .. '{' .. (root and (' -- ' .. tostring(t)) or '')
         local keys = {}
         local key_count = 0
-        for key in pairs(t) do
-            key_count = key_count + 1
-            keys[key_count] = key
+        local has_pairs = pcall(pairs, t)
+        if has_pairs then
+            for key in pairs(t) do
+                key_count = key_count + 1
+                keys[key_count] = key
+            end
+        else
+            for key = 0, -1, 1 do
+                if pcall(function(t, k) return t[k] end, t, key) then
+                    key_count = key_count + 1
+                    keys[key_count] = key
+                end
+            end
         end
 
         table_sort(keys, function(k1, k2)
@@ -39,9 +54,23 @@ do
             local k = keys[i]
             local v = t[k]
             local cycle = cache[v]
+            local value = tostring(v)
+            if string_find(value, '\x00') then
+                local res = ''
+                for i = 1, #value do
+                    local c = string_sub(value, i, i)
+                    if i > 1 then
+                        res = res .. ' '
+                    end
+                    res = res .. string_format('%.2X', string_byte(c))
+                end
+                value = res
+            end
+
             line_count = line_count + 1
-            lines[line_count] = (indent .. '    [' .. tostring(k) .. '] = ' .. tostring(v) .. (cycle and ' -- cycle' or ''))
-            if type(v) == 'table' and not cycle then
+            lines[line_count] = (indent .. '    [' .. tostring(k) .. '] = ' .. value .. (cycle and ' -- cycle' or ''))
+
+            if not cycle and not value:find('windower.event') and pcall(pairs, v) then
                 local inner = vstring(v, level + 1, cache)
                 for i = 1, #inner do
                     line_count = line_count + 1
@@ -66,19 +95,23 @@ end
 
 do
     local table_concat = table.concat
-    local string_format = string.format
     local string_byte = string.byte
+    local string_char = string.char
+    local string_format = string.format
+    local band = bit.band
+    local bnot = bit.bnot
+    local ffi_cast = ffi.cast
 
     local lookup_byte = {}
     for i = 0x20, 0x7E do
-        lookup_byte[i] = string.char(i)
+        lookup_byte[i] = string_char(i)
     end
 
-    util.str_hex_table = function(str)
+    local str_hex_table = function(str)
         local address = 0
         local base_offset = 0
         local end_data = #str
-        local end_display = end_data + 0x10 - end_data % 0x10
+        local end_display = band(end_data + 0xF, bnot(0xF))
 
         local lookup_hex = {}
         local lookup_display = {}
@@ -97,12 +130,12 @@ do
         end
 
         local lines = {}
-        lines[1] = '   | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF'
+        lines[1] = '   |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
         lines[2] = '-----------------------------------------------------------------------'
         for row = 0, end_display / 0x10 - 1 do
             local index_offset = 0x10 * row
             local res =
-                string_format('%02X | ', address - base_offset + index_offset) ..
+                string_format('%2X | ', (address - base_offset + index_offset) / 0x10) ..
                 table_concat(lookup_hex, ' ', index_offset, index_offset + 0xF) .. ' | ' ..
                 table_concat(lookup_display, '', index_offset, index_offset + 0xF)
             lines[row + 3] = res
@@ -110,24 +143,18 @@ do
 
         return table_concat(lines, '\n')
     end
-end
-
-do
-    local table_concat = table.concat
-    local string_format = string.format
-    local ffi_cast = ffi.cast
 
     local lookup_byte = {}
     for i = 0x20, 0x7E do
-        lookup_byte[i] = string.char(i)
+        lookup_byte[i] = string_char(i)
     end
 
-    util.ptr_hex_table = function(ptr, size)
+    local ptr_hex_table = function(ptr, size)
         ptr = ffi_cast('uint8_t*', ptr)
         local address = tonumber(ffi_cast('intptr_t', ptr))
         local base_offset = address % 0x10
         local end_data = base_offset + size
-        local end_display = end_data + 0x10 - end_data % 0x10
+        local end_display = band(end_data + 0xF, bnot(0xF))
 
         local lookup_hex = {}
         local lookup_display = {}
@@ -146,7 +173,7 @@ do
         end
 
         local lines = {}
-        lines[1] = '         | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF'
+        lines[1] = '         |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
         lines[2] = '-----------------------------------------------------------------------------'
         for row = 0, end_display / 0x10 - 1 do
             local index_offset = 0x10 * row
@@ -159,6 +186,14 @@ do
 
         return table_concat(lines, '\n')
     end
+
+    util.hex_table = function(...)
+        if type(...) == 'string' then
+            return str_hex_table(...)
+        elseif type(...) == 'cdata' then
+            return ptr_hex_table(...)
+        end
+    end
 end
 
 do
@@ -166,6 +201,8 @@ do
 
     local table_concat = table.concat
     local string_format = string.format
+    local band = bit.band
+    local bnot = bit.bnot
     local ffi_cast = ffi.cast
 
     local lookup_byte = {}
@@ -178,7 +215,7 @@ do
         local address = tonumber(ffi_cast('intptr_t', ptr))
         local base_offset = address % 0x10
         local end_data = base_offset + size
-        local end_display = end_data + 0x10 - (end_data - 1) % 0x10 + 1
+        local end_display = band(end_data + 0xF, bnot(0xF))
 
         local new_prev = {}
         local lookup_hex = {}
@@ -208,7 +245,7 @@ do
 
         local lines = {
             '\n',
-            '         |      00      01      02      03      04      05      06      07      08      09      0A      0B      0C      0D      0E      0F | 0123456789ABCDEF',
+            '         |       0       1       2       3       4       5       6       7       8       9       A       B       C       D       E       F | 0123456789ABCDEF',
             '-------------------------------------------------------------------------------------------------------------------------------------------------------------',
         }
 

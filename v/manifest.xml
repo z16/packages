@@ -3,16 +3,18 @@
   <version>1.0.0.0</version>
   <type>addon</type>
   <dependencies>
-    <dependency>memory</dependency>
     <dependency>account</dependency>
-    <dependency>packets</dependency>
-    <dependency>player</dependency>
-    <dependency>settings</dependency>
-    <dependency>resources</dependency>
-    <dependency>target</dependency>
     <dependency>entities</dependency>
+    <dependency>equipment</dependency>
+    <dependency>linkshell</dependency>
+    <dependency>memory</dependency>
+    <dependency>packets</dependency>
     <dependency>party</dependency>
-    <dependency>world</dependency>
+    <dependency>player</dependency>
+    <dependency>resources</dependency>
+    <dependency>settings</dependency>
+    <dependency>target</dependency>
     <dependency>util</dependency>
+    <dependency>world</dependency>
   </dependencies>
 </package>
