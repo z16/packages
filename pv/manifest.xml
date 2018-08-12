@@ -3,6 +3,7 @@
   <version>1.0.1.0</version>
   <type>addon</type>
   <dependencies>
+    <dependency>lists</dependency>
     <dependency>packets</dependency>
     <dependency>util</dependency>
   </dependencies>

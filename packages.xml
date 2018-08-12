@@ -24,12 +24,13 @@
     <version>1.0.1.0</version>
     <type>addon</type>
     <dependencies>
+      <dependency>lists</dependency>
       <dependency>packets</dependency>
       <dependency>util</dependency>
     </dependencies>
     <files>
-      <file size="204">pv/manifest.xml</file>
-      <file size="1173">pv/pv.lua</file>
+      <file size="240">pv/manifest.xml</file>
+      <file size="7489">pv/pv.lua</file>
     </files>
   </package>
   <package>
