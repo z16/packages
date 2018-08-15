@@ -8,51 +8,49 @@ local windower = require('windower')
 
 local window_size = windower.settings.client_size
 
-local pv_window = {
-    title = 'Packet Viewer',
-    style = 'normal',
-    x = 0,
-    y = 0,
-    width = 360,
-    height = 260,
-    closable = true,
+local dashboard = {
+    show = false,
+    window_state = {
+        title = 'Packet Viewer',
+        style = 'normal',
+        x = 0,
+        y = 0,
+        width = 360,
+        height = 260,
+        closable = true,
+    },
 }
 
-local pv_log_window = {}
-
-local pv_track_window = {
-    title = 'Packet Viewer Tracker',
-    style = 'normal',
-    x = 370,
-    y = 0,
-    width = 490,
-    height = 360,
-    closable = true,
+local logging = {
+    window_state = {},
 }
-
-local pv_scan_window = {}
-
-local main_window = {
-    show = true,
-}
-
-local logging = {}
 
 local tracking = {
     show = false,
     packets_incoming = lists({}),
     packets_outgoing = lists({}),
-    pattern_temp_incoming = '23',
+    pattern_temp_incoming = '',
     pattern_temp_outgoing = '',
     exclude_incoming = false,
     exclude_outgoing = false,
     exclude_temp_incoming = false,
     exclude_temp_outgoing = false,
+    window_state = {
+        title = 'Packet Viewer Tracker',
+        style = 'normal',
+        x = 370,
+        y = 0,
+        width = 490,
+        height = 460,
+        closable = true,
+    }
 }
 
 local tracked = lists({})
 
-local scanning = {}
+local scanning = {
+    state = {},
+}
 
 local process_pattern = function(pattern)
     local parsed = lists({})
@@ -83,9 +81,9 @@ ui.display(function()
     local bottom_x = 10
     local bottom_y = window_size.height - 18
 
-    if main_window.show then
+    if dashboard.show then
         local closed
-        pv_window, closed = ui.window('pv_window', pv_window, function()
+        dashboard.window_state, closed = ui.window('pv_window', dashboard.window_state, function()
             -- Logging
             local is_logging = false
 
@@ -109,21 +107,21 @@ ui.display(function()
             ui.text('Outgoing IDs')
 
             ui.location(20, y_track + 50)
-            tracking.pattern_temp_incoming = ui.edit('pv_log_pattern_incoming', tracking.pattern_temp_incoming)
+            tracking.pattern_temp_incoming = ui.edit('pv_track_pattern_incoming', tracking.pattern_temp_incoming)
             ui.location(190, y_track + 50)
-            tracking.pattern_temp_outgoing = ui.edit('pv_log_pattern_outgoing', tracking.pattern_temp_outgoing)
+            tracking.pattern_temp_outgoing = ui.edit('pv_track_pattern_outgoing', tracking.pattern_temp_outgoing)
 
             ui.location(18, y_track + 80)
-            if ui.check('pv_log_exclude_incoming', 'Exclude IDs', tracking.exclude_temp_incoming) then
+            if ui.check('pv_track_exclude_incoming', 'Exclude IDs', tracking.exclude_temp_incoming) then
                 tracking.exclude_temp_incoming = not tracking.exclude_temp_incoming
             end
             ui.location(188, y_track + 80)
-            if ui.check('pv_log_exclude_outgoing', 'Exclude IDs', tracking.exclude_temp_outgoing) then
+            if ui.check('pv_track_exclude_outgoing', 'Exclude IDs', tracking.exclude_temp_outgoing) then
                 tracking.exclude_temp_outgoing = not tracking.exclude_temp_outgoing
             end
 
             ui.location(20, y_track + 100)
-            if ui.button('pv_log_start', 'Start tracking') then
+            if ui.button('pv_track_start', 'Start tracking') then
                 tracking.packets_incoming = process_pattern(tracking.pattern_temp_incoming)
                 tracking.packets_outgoing = process_pattern(tracking.pattern_temp_outgoing)
                 tracking.exclude_incoming = tracking.exclude_temp_incoming
@@ -131,7 +129,7 @@ ui.display(function()
                 tracking.show = true
             end
             ui.location(120, y_track + 100)
-            if ui.button('pv_log_stop', 'Stop tracking') then
+            if ui.button('pv_track_stop', 'Stop tracking') then
                 tracking.pattern_incoming = ''
                 tracking.pattern_outgoing = ''
             end
@@ -147,13 +145,13 @@ ui.display(function()
         end)
 
         if closed then
-            main_window.show = false
+            dashboard.show = false
         end
     end
 
     if logging.show then
         local closed
-        pv_log_window, closed = ui.window('pv_log_window', pv_log_window, function()
+        logging.window_state, closed = ui.window('pv_log_window', logging.window_state, function()
         end)
 
         if closed then
@@ -163,7 +161,7 @@ ui.display(function()
 
     if tracking.show then
         local closed
-        pv_track_window, closed = ui.window('pv_track_window', pv_track_window, function()
+        tracking.window_state, closed = ui.window('pv_track_window', tracking.window_state, function()
             if not tracked:any() then
                 return
             end
@@ -185,7 +183,7 @@ ui.display(function()
 
     if scanning.show then
         local closed
-        pv_scan_window, closed = ui.window('pv_scan_window', pv_scan_window, function()
+        scanning.window_state, closed = ui.window('pv_scan_window', scanning.window_state, function()
         end)
 
         if closed then
@@ -196,7 +194,7 @@ ui.display(function()
     do
         ui.location(bottom_x, bottom_y)
         if ui.button('pv_window_maximize', 'Packet Viewer') then
-            main_window.show = not main_window.show
+            dashboard.show = not dashboard.show
         end
         bottom_x = bottom_x + 89
         ui.location(bottom_x, bottom_y)
