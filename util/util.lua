@@ -144,11 +144,6 @@ do
         return table_concat(lines, '\n')
     end
 
-    local lookup_byte = {}
-    for i = 0x20, 0x7E do
-        lookup_byte[i] = string_char(i)
-    end
-
     local ptr_hex_table = function(ptr, size)
         ptr = ffi_cast('uint8_t*', ptr)
         local address = tonumber(ffi_cast('intptr_t', ptr))
@@ -190,7 +185,7 @@ do
     util.hex_table = function(...)
         if type(...) == 'string' then
             return str_hex_table(...)
-        elseif type(...) == 'cdata' then
+        elseif type(...) == 'cdata' or type(...) == 'number' then
             return ptr_hex_table(...)
         end
     end
