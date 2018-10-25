@@ -39,7 +39,7 @@
     <type>library</type>
     <files>
       <file size="98">util/manifest.xml</file>
-      <file size="8943">util/util.lua</file>
+      <file size="8861">util/util.lua</file>
     </files>
   </package>
   <package>
