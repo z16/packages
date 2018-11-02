@@ -41,10 +41,8 @@ local logging = {
 }
 
 local tracking = {
-    show = true,
-    packets_incoming = lists({{0x00E}}),
-    -- show = false,
-    -- packets_incoming = lists({}),
+    show = false,
+    packets_incoming = lists({}),
     packets_outgoing = lists({}),
     pattern_temp_incoming = '',
     pattern_temp_outgoing = '',

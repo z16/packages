@@ -21,7 +21,7 @@
   </package>
   <package>
     <name>pv</name>
-    <version>2.0.0.0</version>
+    <version>2.0.0.1</version>
     <type>addon</type>
     <dependencies>
       <dependency>lists</dependency>
@@ -30,7 +30,7 @@
     </dependencies>
     <files>
       <file size="250">pv/manifest.xml</file>
-      <file size="13397">pv/pv.lua</file>
+      <file size="13331">pv/pv.lua</file>
     </files>
   </package>
   <package>
