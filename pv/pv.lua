@@ -1,10 +1,25 @@
+local bit = require('bit')
 local lists = require('lists')
+local math = require('math')
 local os = require('os')
 local packets = require('packets')
+local shared = require('shared')
 local string = require('string')
+local table = require('table')
 local ui = require('ui')
-local util = require('util')
 local windower = require('windower')
+
+local client = shared.get('packet_service', 'types')
+
+local ftypes = {
+    incoming = {},
+    outgoing = {},
+}
+
+for i = 0, 0x1FF do
+    ftypes.incoming[i] = client:read('incoming', i)
+    ftypes.outgoing[i] = client:read('outgoing', i)
+end
 
 local window_size = windower.settings.client_size
 
@@ -26,8 +41,10 @@ local logging = {
 }
 
 local tracking = {
-    show = false,
-    packets_incoming = lists({}),
+    show = true,
+    packets_incoming = lists({{0x00E}}),
+    -- show = false,
+    -- packets_incoming = lists({}),
     packets_outgoing = lists({}),
     pattern_temp_incoming = '',
     pattern_temp_outgoing = '',
@@ -52,29 +69,205 @@ local scanning = {
     state = {},
 }
 
-local process_pattern = function(pattern)
-    local parsed = lists({})
+local process_pattern
+do
+    local string_gmatch = string.gmatch
+    local string_match = string.match
 
-    for match in pattern:gmatch('[^%s]+') do
-        local single = {}
+    process_pattern = function(pattern)
+        local parsed = lists({})
 
-        local id, rest = match:match('(0?x?%d+)/?(.*)')
-        single[1] = tonumber(id)
+        for match in string_gmatch(pattern, '[^%s]+') do
+            local single = {}
 
-        for sub in rest:gmatch('[^/]+') do
-            local key, value = sub:match('(.*)=\'(.*)\'')
-            if value then
-                single[key] = value
+            local id, rest = string_match(match, '(0?x?[A-Fa-f0-9]+)/?(.*)')
+            single[1] = tonumber(id)
+
+            for sub in string_gmatch(rest, '[^/]+') do
+                local key, value = string_match(sub, '(.*)=\'(.*)\'')
+                if value then
+                    single[key] = value
+                else
+                    key, value = string_match(sub, '(.*)=(.*)')
+                    single[key] = value == 'true' or value ~= 'false' and tonumber(value) or false
+                end
+            end
+
+            parsed:add(single)
+        end
+
+        return parsed
+    end
+end
+
+local colors = {}
+do
+    local math_sqrt = math.sqrt
+    local math_pi = math.pi
+    local ui_color_hsv = ui.color.hsv
+    local ui_color_tohex = ui.color.tohex
+
+    for i = 1, 0x400 do
+        local color = ui_color_hsv((i * 67 + 210) % 360, 0.7, 1)
+        colors[i] = ui_color_tohex(color)
+    end
+end
+
+local build_packet_fields
+do
+    local table_concat = table.concat
+
+    build_packet_fields = function(packet, ftype, color_table)
+        local arranged = ftype.arranged
+        local lines = {}
+        local lines_count = 0
+        for i = 1, #arranged do
+            local field = arranged[i]
+            lines_count = lines_count + 1
+            lines[lines_count] = '[' .. field.label .. ': ' .. tostring(packet[field.label]) .. ']{' .. colors[i] .. '}'
+        end
+
+        return table_concat(lines, '\n')
+    end
+end
+
+local build_packet_table
+do
+    local table_concat = table.concat
+    local string_byte = string.byte
+    local string_char = string.char
+    local string_format = string.format
+    local band = bit.band
+    local bnot = bit.bnot
+
+    local lookup_byte = {}
+    for i = 0x20, 0x7E do
+        lookup_byte[i] = string_char(i)
+    end
+    local escape = {
+        '\\',
+        '[',
+        ']',
+        '{',
+        '}',
+    }
+    for i = 1, #escape do
+        local char = escape[i]
+        lookup_byte[string_byte(char)] = '\\' .. char
+    end
+
+    build_packet_table = function(data, ftype, color_table)
+        local address = 0
+        local base_offset = 0
+        local end_data = #data
+        local end_char = band(end_data + 0xF, bnot(0xF))
+
+        local lookup_hex = {}
+        local lookup_char = {}
+        for i = end_data, end_char - 1 do
+            lookup_hex[i] = '--'
+            lookup_char[i] = '-'
+        end
+        for i = base_offset, end_data - 1 do
+            local byte = string_byte(data, i - base_offset + 1)
+            lookup_hex[i] = string_format('%02X', byte)
+            lookup_char[i] = lookup_byte[byte] or '.'
+        end
+
+        local lines = {}
+        lines[1] = '   |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
+        lines[2] = '-----------------------------------------------------------------------'
+        for row = 0, end_char / 0x10 - 1 do
+            local index_offset = 0x10 * row
+            local prefix = string_format('%2X | ', (address - base_offset + index_offset) / 0x10)
+            local hex_table = {}
+            local char_table = {}
+            for i = 0, 0xF do
+                local pos = index_offset + i
+                local color = color_table[pos] or '#404040'
+                local hex = lookup_hex[pos]
+                local char = lookup_char[pos]
+                hex_table[i + 1] = ('[' .. hex .. ']{' .. color .. '}')
+                char_table[i + 1] = ('[' .. char .. ']{' .. color .. '}')
+            end
+
+            lines[row + 3] = prefix .. table_concat(hex_table, ' ') .. ' | ' .. table_concat(char_table)
+        end
+
+        return table_concat(lines, '\n')
+    end
+end
+
+local build_color_table
+do
+    local math_floor = math.floor
+
+    build_color_table = function(info, ftype, color_table)
+        color_table = color_table or {}
+
+        local color_table_count = #color_table
+        local arranged = ftype.arranged
+        local arranged_count = #arranged
+        for i = 1, arranged_count do
+            local field = arranged[i]
+            local position = field.position
+            local type = field.type
+
+            local size = type.size
+            local var_size = type.var_size
+            local bits = type.bits
+
+            local from, to
+            if bits then
+                from = position
+                to = position + math_floor((field.offset + bits) / 8)
+            elseif size == '*' then
+                from = position
+                to = #info.data - 1
             else
-                key, value = sub:match('(.*)=(.*)')
-                single[key] = value == 'true' or value ~= 'false' and tonumber(value) or false
+                from = position
+                to = position + size - 1
+            end
+
+            for index = from, to do
+                if not color_table[index] then
+                    color_table[index] = colors[color_table_count + i]
+                end
             end
         end
 
-        parsed:add(single)
+        return color_table
     end
+end
 
-    return parsed
+local display_packet
+do
+    local packet_display_cache = {}
+
+    display_packet = function(packet)
+        local text = packet_display_cache[p]
+        if not text then
+            local info = packet._info
+            local data = info.data
+
+            ui.location(10, 10)
+
+            local ftype = ftypes[info.direction][info.id]
+            if ftype.types then
+                ftype = ftype.types[p[ftype.key]]
+            end
+
+            local color_table = build_color_table(info, ftype)
+
+            local table = build_packet_table(data, ftype, color_table)
+            local fields = ftype and build_packet_fields(packet, ftype, color_table)
+
+            text = '[' .. table .. '\n\n' .. fields .. ']{Consolas 12px}'
+            packet_display_cache[packet] = text
+        end
+
+        ui.text(text)
+    end
 end
 
 ui.display(function()
@@ -130,8 +323,11 @@ ui.display(function()
             end
             ui.location(120, y_track + 100)
             if ui.button('pv_track_stop', 'Stop tracking') then
-                tracking.pattern_incoming = ''
-                tracking.pattern_outgoing = ''
+                tracking.packets_incoming = lists({})
+                tracking.packets_outgoing = lists({})
+                tracking.exclude_incoming = false
+                tracking.exclude_outgoing = false
+                tracking.show = false
             end
 
             -- Scanning
@@ -166,14 +362,7 @@ ui.display(function()
                 return
             end
 
-            local p = tracked[index or #tracked]
-            local info = p._info
-            p._info = nil
-
-            ui.location(10, 10)
-            ui.text('[' .. util.hex_table(info.data) .. '\n\n' .. util.vstring(p) .. ']{Consolas 12px}')
-
-            p._info = info
+            display_packet(tracked[index or #tracked])
         end)
 
         if closed then
@@ -214,8 +403,8 @@ ui.display(function()
     end
 end)
 
-local check_filter = function(filter, p)
-    local info = p._info
+local check_filter = function(filter, packet)
+    local info = packet._info
     if info.id ~= filter[1] then
         return false
     end
@@ -232,21 +421,21 @@ local check_filter = function(filter, p)
     return true
 end
 
-local track_packet = function(p)
-    local filters = tracking['packets_' .. p._info.direction]
-    if not filters:any(check_filter, p) then
+local track_packet = function(packet)
+    local filters = tracking['packets_' .. packet._info.direction]
+    if not filters:any(check_filter, packet) then
         return
     end
 
-    tracked:add(p)
+    tracked:add(packet)
 end
 
-packets:register(function(p)
+packets:register(function(packet)
     -- Logging
     --TODO
 
     -- Tracking
-    track_packet(p)
+    track_packet(packet)
 
     -- Scanning
     --TODO
