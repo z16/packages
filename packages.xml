@@ -21,16 +21,16 @@
   </package>
   <package>
     <name>pv</name>
-    <version>1.0.1.0</version>
+    <version>2.0.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>lists</dependency>
+      <dependency>packet_service</dependency>
       <dependency>packets</dependency>
-      <dependency>util</dependency>
     </dependencies>
     <files>
-      <file size="240">pv/manifest.xml</file>
-      <file size="7489">pv/pv.lua</file>
+      <file size="250">pv/manifest.xml</file>
+      <file size="13397">pv/pv.lua</file>
     </files>
   </package>
   <package>
