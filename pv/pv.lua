@@ -165,6 +165,7 @@ do
         for i = end_data, end_char - 1 do
             lookup_hex[i] = '--'
             lookup_char[i] = '-'
+            color_table[i] = '#606060'
         end
         for i = base_offset, end_data - 1 do
             local byte = string_byte(data, i - base_offset + 1)
@@ -182,11 +183,12 @@ do
             local char_table = {}
             for i = 0, 0xF do
                 local pos = index_offset + i
-                local color = color_table[pos] or '#404040'
+                local color = color_table[pos] or '#A0A0A0'
                 local hex = lookup_hex[pos]
                 local char = lookup_char[pos]
-                hex_table[i + 1] = ('[' .. hex .. ']{' .. color .. '}')
-                char_table[i + 1] = ('[' .. char .. ']{' .. color .. '}')
+                local suffix = ']{' .. color ..'}'
+                hex_table[i + 1] = '[' .. hex .. suffix
+                char_table[i + 1] = '[' .. char .. suffix
             end
 
             lines[row + 3] = prefix .. table_concat(hex_table, ' ') .. ' | ' .. table_concat(char_table)
@@ -200,7 +202,10 @@ local build_color_table
 do
     local math_floor = math.floor
 
-    build_color_table = function(info, ftype, color_table)
+    local color_table_cache = {}
+
+    local make_table
+    make_table = function(info, ftype, color_table)
         color_table = color_table or {}
 
         local color_table_count = #color_table
@@ -234,6 +239,17 @@ do
             end
         end
 
+        return color_table
+    end
+
+    build_color_table = function(info, ftype)
+        local color_table = color_table_cache[ftype]
+        if not color_table then
+            color_table = make_table(info, ftype)
+            color_table_cache[ftype] = color_table
+        end
+
+        --TODO ftype.var_size
         return color_table
     end
 end
