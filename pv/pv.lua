@@ -3,6 +3,7 @@ local lists = require('lists')
 local math = require('math')
 local os = require('os')
 local packets = require('packets')
+local settings = require('settings')
 local shared = require('shared')
 local string = require('string')
 local table = require('table')
@@ -21,51 +22,126 @@ for i = 0, 0x1FF do
     ftypes.outgoing[i] = client:read('outgoing', i)
 end
 
-local window_size = windower.settings.client_size
-
-local dashboard = {
-    show = false,
-    window_state = {
-        title = 'Packet Viewer',
-        style = 'normal',
+local options = settings.load({
+    dashboard = {
+        visible = false,
         x = 0,
         y = 0,
         width = 360,
         height = 260,
-        closable = true,
     },
-}
-
-local logging = {
-    window_state = {},
-}
-
-local tracking = {
-    show = false,
-    packets_incoming = lists({}),
-    packets_outgoing = lists({}),
-    pattern_temp_incoming = '',
-    pattern_temp_outgoing = '',
-    exclude_incoming = false,
-    exclude_outgoing = false,
-    exclude_temp_incoming = false,
-    exclude_temp_outgoing = false,
-    window_state = {
-        title = 'Packet Viewer Tracker',
-        style = 'normal',
+    logger = {
+        visible = false,
+    },
+    tracker = {
+        visible = false,
         x = 370,
         y = 0,
         width = 490,
         height = 460,
-        closable = true,
-    }
-}
+        incoming = {
+            pattern = '',
+            exclude = false,
+        },
+        outgoing = {
+            pattern = '',
+            exclude = false,
+        },
+        active = false,
+    },
+    scanner = {
+        visible = false,
+    },
+}, true)
 
-local tracked = lists({})
+local watch_state
+local init_state
+do
+    local state_cache = {}
 
-local scanning = {
-    state = {},
-}
+    init_state = function(options, state)
+        state.closable = true
+        state.style = 'normal'
+
+        local x = options.x
+        local y = options.y
+        local width = options.width
+        local height = options.height
+
+        state.x = x
+        state.y = y
+        state.width = width
+        state.height = height
+
+        state_cache[state.title] = {
+            x = x,
+            y = y,
+            width = width,
+            height = height,
+            changed = false,
+            compared = 0,
+            options = options,
+        }
+        return state
+    end
+
+    local update_cache = function(cached, state)
+        local new_x = state.x
+        local new_y = state.y
+        local new_width = state.width
+        local new_height = state.height
+
+        local same =
+            cached.x == new_x and
+            cached.y == new_y and
+            cached.width == new_width and
+            cached.height == new_height
+
+        if same then
+            return same
+        end
+
+        cached.x = new_x
+        cached.y = new_y
+        cached.width = new_width
+        cached.height = new_height
+
+        return same
+    end
+
+    watch_state = function(state)
+        local cached = state_cache[state.title]
+
+        local same = update_cache(cached, state)
+
+        if not same then
+            cached.changed = true
+            cached.compared = 0
+            return 'changing'
+        end
+
+        if not cached.changed then
+            return 'unchanged'
+        end
+
+        local compare_count = cached.compared
+        if compare_count < 10 then
+            cached.compared = compare_count + 1
+            return 'changing'
+        end
+
+        cached.changed = false
+        cached.compared = 0
+
+        local options = cached.options
+        options.x = cached.x
+        options.y = cached.y
+        options.width = cached.width
+        options.height = cached.height
+
+        return 'changed'
+    end
+end
 
 local process_pattern
 do
@@ -97,6 +173,99 @@ do
         return parsed
     end
 end
+
+local dashboard = {
+    display = options.dashboard,
+    window_state = init_state(options.dashboard, {
+        title = 'Packet Viewer',
+    }),
+}
+
+local logger = {
+    display = options.logger,
+    window_state = init_state(options.logger, {
+        title = 'Packet Viewer Logger',
+    }),
+    running = function(t)
+        return false
+    end,
+}
+
+local tracker = {
+    display = options.tracker,
+    window_state = init_state(options.tracker, {
+        title = 'Packet Viewer Tracker',
+    }),
+    data = {
+        incoming = {
+            packets = lists({}),
+            exclude = false,
+        },
+        outgoing = {
+            packets = lists({}),
+            exclude = false,
+        },
+    },
+    visible = function(t, value)
+        t.display.visible = value
+
+        settings.save(options)
+    end,
+    running = function(t)
+        return t.display.active
+    end,
+    start = function(t)
+        local data = t.data
+        local display = t.display
+
+        data.incoming.packets = process_pattern(display.incoming.pattern)
+        data.outgoing.packets = process_pattern(display.outgoing.pattern)
+        data.incoming.exclude = display.incoming.exclude
+        data.outgoing.exclude = display.outgoing.exclude
+        display.active = true
+        display.visible = true
+
+        settings.save(options)
+    end,
+    stop = function(t)
+        local data = t.data
+        local display = t.display
+
+        data.incoming.packets = lists({})
+        data.outgoing.packets = lists({})
+        data.incoming.exclude = false
+        data.outgoing.exclude = false
+        display.active = false
+
+        settings.save(options)
+    end,
+}
+
+local tracking_data = tracker.data
+local tracking_incoming = tracking_data.incoming
+local tracking_outgoing = tracking_data.outgoing
+
+do
+    local data = tracker.data
+    local display = tracker.display
+
+    data.incoming.packets = process_pattern(display.incoming.pattern)
+    data.outgoing.packets = process_pattern(display.outgoing.pattern)
+    data.incoming.exclude = display.incoming.exclude
+    data.outgoing.exclude = display.outgoing.exclude
+end
+
+local tracked = lists({})
+
+local scanner = {
+    display = options.scanner,
+    window_state = init_state(options.scanner, {
+        title = 'Packet Viewer Scanner',
+    }),
+    running = function(t)
+        return false
+    end,
+}
 
 local colors = {}
 do
@@ -285,93 +454,96 @@ do
 end
 
 ui.display(function()
+    local window = ui.window
+    local location = ui.location
+    local text = ui.text
+    local edit = ui.edit
+    local check = ui.check
+    local button = ui.button
+
     local bottom_x = 10
-    local bottom_y = window_size.height - 18
+    local bottom_y = windower.settings.client_size.height - 18
 
-    if dashboard.show then
+    if dashboard.display.visible then
         local closed
-        dashboard.window_state, closed = ui.window('pv_window', dashboard.window_state, function()
+        dashboard.window_state, closed = window('pv_window', dashboard.window_state, function()
             -- Logging
-            local is_logging = false
-
             local y_log = 10
-            ui.location(10, y_log + 0)
-            ui.text('[Logging]{bold 16px} ' .. (is_logging and '[on]{green}' or '[off]{red}'))
+            do
+                location(10, y_log + 0)
+                text('[Logging]{bold 16px} ' .. (logger:running() and '[on]{green}' or '[off]{red}'))
 
-            ui.location(20, y_log + 30)
-            ui.text('Not yet implemented...')
+                location(20, y_log + 30)
+                text('Not yet implemented...')
+            end
 
             -- Tracking
-            local is_tracking = tracking.packets_incoming:any() or tracking.packets_outgoing:any() or tracking.exclude_incoming or tracking.exclude_outgoing
-
             local y_track = y_log + 60
-            ui.location(10, y_track + 0)
-            ui.text('[Tracking]{bold 16px} ' .. (is_tracking and '[on]{green}' or '[off]{red}'))
+            do
+                local display = tracker.display
+                local incoming = display.incoming
+                local outgoing = display.outgoing
 
-            ui.location(20, y_track + 30)
-            ui.text('Incoming IDs')
-            ui.location(190, y_track + 30)
-            ui.text('Outgoing IDs')
+                location(10, y_track + 0)
+                text('[Tracking]{bold 16px} ' .. (tracker:running() and '[on]{green}' or '[off]{red}'))
 
-            ui.location(20, y_track + 50)
-            tracking.pattern_temp_incoming = ui.edit('pv_track_pattern_incoming', tracking.pattern_temp_incoming)
-            ui.location(190, y_track + 50)
-            tracking.pattern_temp_outgoing = ui.edit('pv_track_pattern_outgoing', tracking.pattern_temp_outgoing)
+                location(20, y_track + 30)
+                text('Incoming IDs')
+                location(190, y_track + 30)
+                text('Outgoing IDs')
 
-            ui.location(18, y_track + 80)
-            if ui.check('pv_track_exclude_incoming', 'Exclude IDs', tracking.exclude_temp_incoming) then
-                tracking.exclude_temp_incoming = not tracking.exclude_temp_incoming
-            end
-            ui.location(188, y_track + 80)
-            if ui.check('pv_track_exclude_outgoing', 'Exclude IDs', tracking.exclude_temp_outgoing) then
-                tracking.exclude_temp_outgoing = not tracking.exclude_temp_outgoing
-            end
+                location(20, y_track + 50)
+                incoming.pattern = edit('pv_track_pattern_incoming', incoming.pattern)
+                location(190, y_track + 50)
+                outgoing.pattern = edit('pv_track_pattern_outgoing', outgoing.pattern)
 
-            ui.location(20, y_track + 100)
-            if ui.button('pv_track_start', 'Start tracking') then
-                tracking.packets_incoming = process_pattern(tracking.pattern_temp_incoming)
-                tracking.packets_outgoing = process_pattern(tracking.pattern_temp_outgoing)
-                tracking.exclude_incoming = tracking.exclude_temp_incoming
-                tracking.exclude_outgoing = tracking.exclude_temp_outgoing
-                tracking.show = true
-            end
-            ui.location(120, y_track + 100)
-            if ui.button('pv_track_stop', 'Stop tracking') then
-                tracking.packets_incoming = lists({})
-                tracking.packets_outgoing = lists({})
-                tracking.exclude_incoming = false
-                tracking.exclude_outgoing = false
-                tracking.show = false
+                location(18, y_track + 80)
+                if check('pv_track_exclude_incoming', 'Exclude IDs', incoming.exclude) then
+                    incoming.exclude = not incoming.exclude
+                end
+                location(188, y_track + 80)
+                if check('pv_track_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
+                    outgoing.exclude = not outgoing.exclude
+                end
+
+                location(20, y_track + 100)
+                if button('pv_track_start', 'Start tracker') then
+                    tracker:start()
+                end
+                location(120, y_track + 100)
+                if button('pv_track_stop', 'Stop tracker') then
+                    tracker:stop()
+                end
             end
 
             -- Scanning
-            local is_scanning = scanning.value ~= nil
-
             local y_scan = y_track + 130
-            ui.location(10, y_scan + 0)
-            ui.text('[Scanning]{bold 16px} ' .. (is_scanning and '[on]{green}' or '[off]{red}'))
-            ui.location(20, y_scan + 30)
-            ui.text('Not yet implemented...')
+            do
+                location(10, y_scan + 0)
+                text('[Scanning]{bold 16px} ' .. (scanner:running() and '[on]{green}' or '[off]{red}'))
+                location(20, y_scan + 30)
+                text('Not yet implemented...')
+            end
         end)
 
         if closed then
-            dashboard.show = false
+            dashboard.display.visible = false
         end
     end
 
-    if logging.show then
+    if logger.display.visible then
         local closed
-        logging.window_state, closed = ui.window('pv_log_window', logging.window_state, function()
+        logger.window_state, closed = window('pv_log_window', logger.window_state, function()
         end)
 
         if closed then
-            logging.show = false
+            logger.display.visible = false
         end
     end
 
-    if tracking.show then
+    if tracker.display.visible then
         local closed
-        tracking.window_state, closed = ui.window('pv_track_window', tracking.window_state, function()
+        tracker.window_state, closed = window('pv_track_window', tracker.window_state, function()
             if not tracked:any() then
                 return
             end
@@ -380,39 +552,55 @@ ui.display(function()
         end)
 
         if closed then
-            tracking.show = false
+            tracker:visible(false)
         end
     end
 
-    if scanning.show then
+    if scanner.display.visible then
         local closed
-        scanning.window_state, closed = ui.window('pv_scan_window', scanning.window_state, function()
+        scanner.window_state, closed = window('pv_scan_window', scanner.window_state, function()
         end)
 
         if closed then
-            scanning.show = false
+            scanner.display.visible = false
         end
     end
 
     do
-        ui.location(bottom_x, bottom_y)
-        if ui.button('pv_window_maximize', 'Packet Viewer') then
-            dashboard.show = not dashboard.show
+        location(bottom_x, bottom_y)
+        if button('pv_window_maximize', 'Packet Viewer') then
+            dashboard.display.visible = not dashboard.display.visible
+            settings.save(options)
         end
         bottom_x = bottom_x + 89
-        ui.location(bottom_x, bottom_y)
-        if ui.button('pv_log_window_maximize', 'PV - Logging', {enabled = false}) then
-            logging.show = not logging.show
+        location(bottom_x, bottom_y)
+        if button('pv_log_window_maximize', 'PV - Logging', {enabled = false}) then
+            logger.display.visible = not logger.display.visible
+            settings.save(options)
         end
         bottom_x = bottom_x + 85
-        ui.location(bottom_x, bottom_y)
-        if ui.button('pv_track_window_maximize', 'PV - Tracking') then
-            tracking.show = not tracking.show
+        location(bottom_x, bottom_y)
+        if button('pv_track_window_maximize', 'PV - Tracking') then
+            tracker:visible(not tracker.display.visible)
         end
         bottom_x = bottom_x + 85
-        ui.location(bottom_x, bottom_y)
-        if ui.button('pv_scan_window_maximize', 'PV - Scanning', {enabled = false}) then
-            scanning.show = not scanning.show
+        location(bottom_x, bottom_y)
+        if button('pv_scan_window_maximize', 'PV - Scanning', {enabled = false}) then
+            scanner.display.visible = not scanner.display.visible
+            settings.save(options)
+        end
+    end
+
+    do
+        local statuses = lists({
+            dashboard.window_state,
+            logger.window_state,
+            tracker.window_state,
+            scanner.window_state,
+        }):select(watch_state)
+
+        if statuses:any(function(status) return status == 'changed' end) and statuses:all(function(status) return status ~= 'changing' end) then
+            settings.save(options)
         end
     end
 end)
@@ -425,7 +613,7 @@ local check_filter = function(filter, packet)
 
     for key, value in pairs(filter) do
         if key ~= 1 then
-            local packet_value = p[key]
+            local packet_value = packet[key]
             if packet_value ~= value then
                 return false
             end
@@ -436,7 +624,11 @@ local check_filter = function(filter, packet)
 end
 
 local track_packet = function(packet)
-    local filters = tracking['packets_' .. packet._info.direction]
+    if not tracker:running() then
+        return
+    end
+
+    local filters = tracker.data[packet._info.direction].packets
     if not filters:any(check_filter, packet) then
         return
     end
