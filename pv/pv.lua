@@ -267,15 +267,50 @@ local scanner = {
     end,
 }
 
+local hex_space = {}
+local hex_zero = {}
+do
+    local string_format = string.format
+
+    for i = 0x00, 0xFF do
+        hex_space[i] = string_format('%2X', i)
+        hex_zero[i] = string_format('%02X', i)
+    end
+end
+
 local colors = {}
 do
     local math_sqrt = math.sqrt
     local math_pi = math.pi
-    local ui_color_hsv = ui.color.hsv
+    local ui_color_rgb = ui.color.rgb
     local ui_color_tohex = ui.color.tohex
 
+    local lut = {
+        { 51,153,255},
+        { 51,255,153},
+        {153, 51,255},
+        {255, 51,153},
+        {153,255, 51},
+        {255,153, 51},
+        {255,255,102},
+        {255,102,255},
+        {102,255,255},
+        {102,102,255},
+        {102,255,102},
+        {255,102,102},
+        {255,204,153},
+        {204,255,153},
+        {255,153,204},
+        {153,204,255},
+        {204,153,255},
+        {153,255,204},
+    }
+
+    lut[0] = {204,204,0}
+
     for i = 1, 0x400 do
-        local color = ui_color_hsv((i * 67 + 210) % 360, 0.7, 1)
+        local lu = lut[(i - 1) % 19]
+        local color = ui_color_rgb(lu[1], lu[2], lu[3])
         colors[i] = ui_color_tohex(color)
     end
 end
@@ -286,12 +321,14 @@ do
 
     build_packet_fields = function(packet, ftype, color_table)
         local arranged = ftype.arranged
+        local fields = ftype.fields
         local lines = {}
         local lines_count = 0
         for i = 1, #arranged do
             local field = arranged[i]
+            local label = field.label
             lines_count = lines_count + 1
-            lines[lines_count] = '[' .. field.label .. ': ' .. tostring(packet[field.label]) .. ']{' .. colors[i] .. '}'
+            lines[lines_count] = hex_space[fields[label].position] .. ' [' .. label .. ': ' .. tostring(packet[field.label]) .. ']{' .. colors[i] .. '}'
         end
 
         return table_concat(lines, '\n')
@@ -303,7 +340,7 @@ do
     local table_concat = table.concat
     local string_byte = string.byte
     local string_char = string.char
-    local string_format = string.format
+    local math_floor = math.floor
     local band = bit.band
     local bnot = bit.bnot
 
@@ -338,7 +375,7 @@ do
         end
         for i = base_offset, end_data - 1 do
             local byte = string_byte(data, i - base_offset + 1)
-            lookup_hex[i] = string_format('%02X', byte)
+            lookup_hex[i] = hex_zero[byte]
             lookup_char[i] = lookup_byte[byte] or '.'
         end
 
@@ -347,7 +384,7 @@ do
         lines[2] = '-----------------------------------------------------------------------'
         for row = 0, end_char / 0x10 - 1 do
             local index_offset = 0x10 * row
-            local prefix = string_format('%2X | ', (address - base_offset + index_offset) / 0x10)
+            local prefix = hex_space[math_floor((address - base_offset + index_offset) / 0x10)] .. ' | '
             local hex_table = {}
             local char_table = {}
             for i = 0, 0xF do
