@@ -1,25 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <packages>
   <package>
-    <name>insanity</name>
-    <version>1.0.0.0</version>
-    <type>addon</type>
-    <dependencies>
-      <dependency>packets</dependency>
-      <dependency>account</dependency>
-      <dependency>player</dependency>
-      <dependency>equipment</dependency>
-      <dependency>items</dependency>
-    </dependencies>
-    <files>
-      <file size="109">insanity/insanity.lua</file>
-      <file size="569">insanity/login.lua</file>
-      <file size="51">insanity/main.lua</file>
-      <file size="326">insanity/manifest.xml</file>
-      <file size="261">insanity/test.lua</file>
-    </files>
-  </package>
-  <package>
     <name>pv</name>
     <version>2.1.1.0</version>
     <type>addon</type>
