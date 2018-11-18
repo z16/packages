@@ -2,17 +2,19 @@
 <packages>
   <package>
     <name>pv</name>
-    <version>2.1.1.0</version>
+    <version>2.2.0.0</version>
     <type>addon</type>
     <dependencies>
+      <dependency>entities</dependency>
       <dependency>lists</dependency>
       <dependency>packet_service</dependency>
       <dependency>packets</dependency>
+      <dependency>resources</dependency>
       <dependency>settings</dependency>
     </dependencies>
     <files>
-      <file size="289">pv/manifest.xml</file>
-      <file size="19125">pv/pv.lua</file>
+      <file size="368">pv/manifest.xml</file>
+      <file size="20996">pv/pv.lua</file>
     </files>
   </package>
   <package>

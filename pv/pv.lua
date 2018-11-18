@@ -1,8 +1,10 @@
 local bit = require('bit')
+local entities = require('entities')
 local lists = require('lists')
 local math = require('math')
 local os = require('os')
 local packets = require('packets')
+local resources = require('resources')
 local settings = require('settings')
 local shared = require('shared')
 local string = require('string')
@@ -37,7 +39,7 @@ local options = settings.load({
         visible = false,
         x = 370,
         y = 0,
-        width = 490,
+        width = 480,
         height = 460,
         incoming = {
             pattern = '',
@@ -267,12 +269,14 @@ local scanner = {
     end,
 }
 
+local hex_raw = {}
 local hex_space = {}
 local hex_zero = {}
 do
     local string_format = string.format
 
     for i = 0x00, 0xFF do
+        hex_raw[i] = string_format('%X', i)
         hex_space[i] = string_format('%2X', i)
         hex_zero[i] = string_format('%02X', i)
     end
@@ -318,6 +322,25 @@ end
 local build_packet_fields
 do
     local table_concat = table.concat
+    local string_byte = string.byte
+    local string_format = string.format
+    local string_rep = string.rep
+    local math_floor = math.floor
+
+    local data_formats = {}
+    local data_lengths = {}
+
+    for value_length = 1, 20 do
+        data_formats[value_length] = string_rep('%02X ', value_length)
+    end
+
+    for label_length = 1, 60 do
+        data_lengths[label_length] = math_floor((64 - label_length - 1) / 3)
+    end
+
+    local append = function(value, lookup)
+        return tostring(value) .. ' (' .. tostring(lookup or '?') .. ')'
+    end
 
     build_packet_fields = function(packet, ftype, color_table)
         local arranged = ftype.arranged
@@ -328,7 +351,31 @@ do
             local field = arranged[i]
             local label = field.label
             lines_count = lines_count + 1
-            lines[lines_count] = hex_space[fields[label].position] .. ' [' .. label .. ': ' .. tostring(packet[field.label]) .. ']{' .. colors[i] .. '}'
+
+            local value = packet[field.label]
+
+            local tag = field.type.tag
+            if tag == 'data' then
+                local data_length = #value
+                local max_length = data_lengths[#label]
+                local format = data_length > max_length and data_formats[max_length] .. '…' or data_formats[data_length]
+
+                value = string_format(format, string_byte(value, 1, max_length))
+            elseif tag == 'entity' then
+                local entity = entities.get_by_id(value)
+                value = append(value, entity and entity.name)
+            elseif tag == 'entity_index' then
+                local entity = entities[value]
+                value = append(value, entity and entity.name)
+            elseif tag then
+                local resource_table = resources[tag]
+                if resource_table then
+                    local resource = resource_table[value]
+                    value = append(value, resource and resource.name)
+                end
+            end
+
+            lines[lines_count] = hex_space[fields[label].position] .. ' [' .. label .. ': ' .. tostring(value) .. ']{' .. colors[i] .. '}'
         end
 
         return table_concat(lines, '\n')
@@ -380,11 +427,11 @@ do
         end
 
         local lines = {}
-        lines[1] = '   |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
-        lines[2] = '-----------------------------------------------------------------------'
+        lines[1] = '  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
+        lines[2] = '----------------------------------------------------------------------'
         for row = 0, end_char / 0x10 - 1 do
             local index_offset = 0x10 * row
-            local prefix = hex_space[math_floor((address - base_offset + index_offset) / 0x10)] .. ' | '
+            local prefix = hex_raw[math_floor((address - base_offset + index_offset) / 0x10)] .. ' | '
             local hex_table = {}
             local char_table = {}
             for i = 0, 0xF do
@@ -449,6 +496,10 @@ do
     end
 
     build_color_table = function(info, ftype)
+        if not ftype then
+            return {}
+        end
+
         local color_table = color_table_cache[ftype]
         if not color_table then
             color_table = make_table(info, ftype)
@@ -473,8 +524,9 @@ do
             ui.location(10, 10)
 
             local ftype = ftypes[info.direction][info.id]
-            if ftype.types then
-                ftype = ftype.types[p[ftype.key]]
+            local types = ftype and ftype.types
+            if types then
+                ftype = types[p[ftype.key]]
             end
 
             local color_table = build_color_table(info, ftype)
@@ -482,7 +534,7 @@ do
             local table = build_packet_table(data, ftype, color_table)
             local fields = ftype and build_packet_fields(packet, ftype, color_table)
 
-            text = '[' .. table .. '\n\n' .. fields .. ']{Consolas 12px}'
+            text = '[' .. table .. (fields and '\n\n' .. fields or '') .. ']{Consolas 12px}'
             packet_display_cache[packet] = text
         end
 
