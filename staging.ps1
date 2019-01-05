@@ -1,8 +1,12 @@
-$includePackages = "pv","v","util"
+$includePackages = "pv", "v", "util"
 
 $knownPackages = Get-ChildItem -Directory |
     Where-Object {
-        $includePackages.Contains([System.IO.Path]::GetFileName($_))
+        if (Test-Path variable:global:includePackages) {
+            $includePackages.Contains([System.IO.Path]::GetFileName($_))
+        } else {
+            Test-Path (Join-Path $_ "manifest.xml")
+        }
     } |
     ForEach-Object {
         $_.Name
@@ -21,10 +25,6 @@ $packagesWriter.WriteStartElement("packages")
 $knownPackages |
     ForEach-Object {
         $path = $_
-
-        if ($path -eq "insanity") {
-            return
-        }
 
         $manifest = Join-Path $path "manifest.xml"
         $package = ([xml](Get-Content $manifest)).package
