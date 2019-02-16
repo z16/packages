@@ -4,6 +4,7 @@ local util = require('util')
 
 account = require('account')
 equipment = require('equipment')
+items = require('items')
 linkshell = require('linkshell')
 memory = require('memory')
 player = require('player')
@@ -11,8 +12,6 @@ target = require('target')
 world = require('world')
 
 local expressions = {
-    'equipment',
-    'player',
 }
 
 for i, expression in ipairs(expressions) do

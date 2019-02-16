@@ -6,6 +6,7 @@
     <dependency>account</dependency>
     <dependency>entities</dependency>
     <dependency>equipment</dependency>
+    <dependency>items</dependency>
     <dependency>linkshell</dependency>
     <dependency>memory</dependency>
     <dependency>packets</dependency>
