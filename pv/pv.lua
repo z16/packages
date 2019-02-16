@@ -1,9 +1,11 @@
 local bit = require('bit')
 local entities = require('entities')
-local lists = require('lists')
+local ffi = require('ffi')
+local list = require('list')
 local math = require('math')
 local os = require('os')
 local packets = require('packets')
+local queue = require('queue')
 local resources = require('resources')
 local settings = require('settings')
 local shared = require('shared')
@@ -30,10 +32,23 @@ local options = settings.load({
         x = 0,
         y = 0,
         width = 360,
-        height = 260,
+        height = 360,
     },
     logger = {
         visible = false,
+        x = 370,
+        y = 0,
+        width = 960,
+        height = 240,
+        incoming = {
+            pattern = '',
+            exclude = false,
+        },
+        outgoing = {
+            pattern = '',
+            exclude = false,
+        },
+        active = false,
     },
     tracker = {
         visible = false,
@@ -151,7 +166,7 @@ do
     local string_match = string.match
 
     process_pattern = function(pattern)
-        local parsed = lists({})
+        local parsed = list()
 
         for match in string_gmatch(pattern, '[^%s]+') do
             local single = {}
@@ -188,8 +203,43 @@ local logger = {
     window_state = init_state(options.logger, {
         title = 'Packet Viewer Logger',
     }),
+    data = {
+        incoming = {
+            packets = list(),
+            exclude = false,
+        },
+        outgoing = {
+            packets = list(),
+            exclude = false,
+        },
+    },
     running = function(t)
-        return false
+        return t.display.active
+    end,
+    start = function(t)
+        local data = t.data
+        local display = t.display
+
+        data.incoming.packets = process_pattern(display.incoming.pattern)
+        data.outgoing.packets = process_pattern(display.outgoing.pattern)
+        data.incoming.exclude = display.incoming.exclude
+        data.outgoing.exclude = display.outgoing.exclude
+        display.active = true
+        display.visible = true
+
+        settings.save(options)
+    end,
+    stop = function(t)
+        local data = t.data
+        local display = t.display
+
+        data.incoming.packets = list()
+        data.outgoing.packets = list()
+        data.incoming.exclude = false
+        data.outgoing.exclude = false
+        display.active = false
+
+        settings.save(options)
     end,
 }
 
@@ -200,11 +250,11 @@ local tracker = {
     }),
     data = {
         incoming = {
-            packets = lists({}),
+            packets = list(),
             exclude = false,
         },
         outgoing = {
-            packets = lists({}),
+            packets = list(),
             exclude = false,
         },
     },
@@ -233,8 +283,8 @@ local tracker = {
         local data = t.data
         local display = t.display
 
-        data.incoming.packets = lists({})
-        data.outgoing.packets = lists({})
+        data.incoming.packets = list()
+        data.outgoing.packets = list()
         data.incoming.exclude = false
         data.outgoing.exclude = false
         display.active = false
@@ -243,9 +293,15 @@ local tracker = {
     end,
 }
 
-local tracking_data = tracker.data
-local tracking_incoming = tracking_data.incoming
-local tracking_outgoing = tracking_data.outgoing
+do
+    local data = logger.data
+    local display = logger.display
+
+    data.incoming.packets = process_pattern(display.incoming.pattern)
+    data.outgoing.packets = process_pattern(display.outgoing.pattern)
+    data.incoming.exclude = display.incoming.exclude
+    data.outgoing.exclude = display.outgoing.exclude
+end
 
 do
     local data = tracker.data
@@ -257,7 +313,8 @@ do
     data.outgoing.exclude = display.outgoing.exclude
 end
 
-local tracked = lists({})
+local tracked = list()
+local logged = queue()
 
 local scanner = {
     display = options.scanner,
@@ -270,6 +327,7 @@ local scanner = {
 }
 
 local hex_raw = {}
+local hex_raw_3 = {}
 local hex_space = {}
 local hex_zero = {}
 do
@@ -279,6 +337,37 @@ do
         hex_raw[i] = string_format('%X', i)
         hex_space[i] = string_format('%2X', i)
         hex_zero[i] = string_format('%02X', i)
+    end
+
+    for i = 0x000, 0x200 do
+        hex_raw_3[i] = string_format('%03X', i)
+    end
+end
+
+local hex
+do
+    local ffi_string = ffi.string
+    local string_byte = string.byte
+    local string_format = string.format
+    local table_concat = table.concat
+
+    local buffer = ffi.new('char[0x400]')
+
+    hex = function(v)
+        if type(v) == 'number' then
+            return string_format('%X', v)
+        elseif type(v) == 'string' then
+            local length = #v
+            for i = 0, length - 1 do
+                local str = hex_zero[string_byte(v, i + 1)]
+                buffer[3 * i] = string_byte(str, 1)
+                buffer[3 * i + 1] = string_byte(str, 2)
+                buffer[3 * i + 2] = 0x20
+            end
+            return ffi_string(buffer, 3 * length)
+        elseif type(v) == 'boolean' then
+            return v and '1' or '0'
+        end
     end
 end
 
@@ -559,15 +648,44 @@ ui.display(function()
             -- Logging
             local y_log = 10
             do
+                local display = logger.display
+                local incoming = display.incoming
+                local outgoing = display.outgoing
+
                 location(10, y_log + 0)
                 text('[Logging]{bold 16px} ' .. (logger:running() and '[on]{green}' or '[off]{red}'))
 
                 location(20, y_log + 30)
-                text('Not yet implemented...')
+                text('Incoming IDs')
+                location(190, y_log + 30)
+                text('Outgoing IDs')
+
+                location(20, y_log + 50)
+                incoming.pattern = edit('pv_log_pattern_incoming', incoming.pattern)
+                location(190, y_log + 50)
+                outgoing.pattern = edit('pv_log_pattern_outgoing', outgoing.pattern)
+
+                location(18, y_log + 80)
+                if check('pv_log_exclude_incoming', 'Exclude IDs', incoming.exclude) then
+                    incoming.exclude = not incoming.exclude
+                end
+                location(188, y_log + 80)
+                if check('pv_log_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
+                    outgoing.exclude = not outgoing.exclude
+                end
+
+                location(20, y_log + 100)
+                if button('pv_log_start', 'Start logger') then
+                    logger:start()
+                end
+                location(120, y_log + 100)
+                if button('pv_log_stop', 'Stop logger') then
+                    logger:stop()
+                end
             end
 
             -- Tracking
-            local y_track = y_log + 60
+            local y_track = y_log + 130
             do
                 local display = tracker.display
                 local incoming = display.incoming
@@ -623,10 +741,13 @@ ui.display(function()
     if logger.display.visible then
         local closed
         logger.window_state, closed = window('pv_log_window', logger.window_state, function()
+            for i = 1, #logged do
+                text(logged[i])
+            end
         end)
 
         if closed then
-            logger.display.visible = false
+            logger:visible(false)
         end
     end
 
@@ -681,12 +802,12 @@ ui.display(function()
     end
 
     do
-        local statuses = lists({
+        local statuses = list(
             dashboard.window_state,
             logger.window_state,
             tracker.window_state,
-            scanner.window_state,
-        }):select(watch_state)
+            scanner.window_state
+        ):select(watch_state)
 
         if statuses:any(function(status) return status == 'changed' end) and statuses:all(function(status) return status ~= 'changing' end) then
             settings.save(options)
@@ -694,22 +815,39 @@ ui.display(function()
     end
 end)
 
-local check_filter = function(filter, packet)
+local check_filter = function(filter, packet, exclude)
     local info = packet._info
     if info.id ~= filter[1] then
-        return false
+        return exclude
     end
 
     for key, value in pairs(filter) do
         if key ~= 1 then
             local packet_value = packet[key]
             if packet_value ~= value then
-                return false
+                return exclude
             end
         end
     end
 
-    return true
+    return not exclude
+end
+
+local log_packet = function(packet)
+    if not logger:running() then
+        return
+    end
+
+    local info = packet._info
+    local data = logger.data[info.direction]
+    if not data.packets:any(check_filter, packet, data.exclude) then
+        return
+    end
+
+    logged:push('[' .. os.date('%H:%M:%S', os.time()) .. ']  ' .. info.direction .. ' 0x' .. hex_raw_3[info.id] .. ':    ' .. hex(info.data))
+    if #logged > 0x10 then
+        logged:pop()
+    end
 end
 
 local track_packet = function(packet)
@@ -717,8 +855,8 @@ local track_packet = function(packet)
         return
     end
 
-    local filters = tracker.data[packet._info.direction].packets
-    if not filters:any(check_filter, packet) then
+    local data = tracker.data[packet._info.direction]
+    if not data.packets:any(check_filter, packet, data.exclude) then
         return
     end
 
@@ -727,7 +865,7 @@ end
 
 packets:register(function(packet)
     -- Logging
-    --TODO
+    log_packet(packet)
 
     -- Tracking
     track_packet(packet)

@@ -4,9 +4,10 @@
   <type>addon</type>
   <dependencies>
     <dependency>entities</dependency>
-    <dependency>lists</dependency>
+    <dependency>list</dependency>
     <dependency>packet_service</dependency>
     <dependency>packets</dependency>
+    <dependency>queue</dependency>
     <dependency>resources</dependency>
     <dependency>settings</dependency>
   </dependencies>
