@@ -2,19 +2,20 @@
 <packages>
   <package>
     <name>pv</name>
-    <version>2.2.0.0</version>
+    <version>3.0.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
-      <dependency>lists</dependency>
+      <dependency>list</dependency>
       <dependency>packet_service</dependency>
       <dependency>packets</dependency>
+      <dependency>queue</dependency>
       <dependency>resources</dependency>
       <dependency>settings</dependency>
     </dependencies>
     <files>
-      <file size="368">pv/manifest.xml</file>
-      <file size="20996">pv/pv.lua</file>
+      <file size="403">pv/manifest.xml</file>
+      <file size="36281">pv/pv.lua</file>
     </files>
   </package>
   <package>
@@ -28,12 +29,13 @@
   </package>
   <package>
     <name>v</name>
-    <version>1.0.0.0</version>
+    <version>1.0.0.1</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
       <dependency>entities</dependency>
       <dependency>equipment</dependency>
+      <dependency>items</dependency>
       <dependency>linkshell</dependency>
       <dependency>memory</dependency>
       <dependency>packets</dependency>
@@ -46,8 +48,8 @@
       <dependency>world</dependency>
     </dependencies>
     <files>
-      <file size="622">v/manifest.xml</file>
-      <file size="1092">v/v.lua</file>
+      <file size="658">v/manifest.xml</file>
+      <file size="1085">v/v.lua</file>
     </files>
   </package>
 </packages>
