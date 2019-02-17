@@ -978,7 +978,17 @@ ui.display(function()
         local closed
         logger.window_state, closed = window('pv_log_window', logger.window_state, function()
             for i = 1, #logged do
-                text(logged[i])
+                local y = 20 * i - 16
+                local log = logged[i]
+
+                location(10, y)
+                text(log.timestamp)
+                location(80, y)
+                text(log.direction)
+                location(150, y)
+                text(log.id)
+                location(200, y)
+                text(log.hex)
             end
         end)
 
@@ -1051,49 +1061,61 @@ end)
 local check_filter = function(filter, packet, exclude)
     local info = packet._info
     if info.id ~= filter[1] then
-        return exclude
+        return false
     end
 
     for key, value in pairs(filter) do
         if key ~= 1 then
             local packet_value = packet[key]
             if packet_value ~= value then
-                return exclude
+                return false
             end
         end
     end
 
-    return not exclude
+    return true
+end
+
+local check_filters = function(handler, packet)
+    if not handler:running() then
+        return false
+    end
+
+    local data = handler.data[packet._info.direction]
+    return data.exclude ~= data.packets:any(check_filter, packet)
 end
 
 local log_packet = function(packet)
-    if not logger:running() then
+    if not check_filters(logger, packet) then
         return
     end
 
     local info = packet._info
-    local data = logger.data[info.direction]
-    if not data.packets:any(check_filter, packet, data.exclude) then
-        return
-    end
-
-    logged:push('[' .. os.date('%H:%M:%S', os.time()) .. ']  ' .. info.direction .. ' 0x' .. hex_raw_3[info.id] .. ':    ' .. hex(info.data))
+    logged:push({
+        timestamp = '[' .. os.date('%H:%M:%S', os.time()) .. ']',
+        direction = info.direction,
+        id = ' 0x' .. hex_raw_3[info.id],
+        hex = hex(info.data),
+    })
     if #logged > 0x10 then
         logged:pop()
     end
 end
 
 local track_packet = function(packet)
-    if not tracker:running() then
-        return
-    end
-
-    local data = tracker.data[packet._info.direction]
-    if not data.packets:any(check_filter, packet, data.exclude) then
+    if not check_filters(tracker, packet) then
         return
     end
 
     tracked:add(packet)
+end
+
+local scan_packet = function(packet)
+    if not check_filters(scanner, packet) then
+        return
+    end
+
+    --TODO
 end
 
 packets:register(function(packet)
@@ -1104,5 +1126,5 @@ packets:register(function(packet)
     track_packet(packet)
 
     -- Scanning
-    --TODO
+    scan_packet(packet)
 end)
