@@ -29,6 +29,11 @@ end
 local options = settings.load({
     dashboard = {
         visible = false,
+        show = {
+            logger = true,
+            tracker = true,
+            scanner = true,
+        },
         x = 0,
         y = 0,
         width = 360,
@@ -39,7 +44,7 @@ local options = settings.load({
         x = 370,
         y = 0,
         width = 960,
-        height = 240,
+        height = 330,
         incoming = {
             pattern = '',
             exclude = false,
@@ -68,6 +73,22 @@ local options = settings.load({
     },
     scanner = {
         visible = false,
+        x = 370,
+        y = 0,
+        width = 360,
+        height = 240,
+        value = '',
+        type = '',
+        length = 1,
+        incoming = {
+            pattern = '',
+            exclude = true,
+        },
+        outgoing = {
+            pattern = '',
+            exclude = true,
+        },
+        active = false,
     },
 }, true)
 
@@ -196,6 +217,26 @@ local dashboard = {
     window_state = init_state(options.dashboard, {
         title = 'Packet Viewer',
     }),
+    visible = function(t, value)
+        t.display.visible = value
+
+        settings.save(options)
+    end,
+    show_logger = function(t, value)
+        t.display.show.logger = value
+
+        settings.save(options)
+    end,
+    show_tracker = function(t, value)
+        t.display.show.tracker = value
+
+        settings.save(options)
+    end,
+    show_scanner = function(t, value)
+        t.display.show.scanner = value
+
+        settings.save(options)
+    end,
 }
 
 local logger = {
@@ -216,6 +257,11 @@ local logger = {
     running = function(t)
         return t.display.active
     end,
+    visible = function(t, value)
+        t.display.visible = value
+
+        settings.save(options)
+    end,
     start = function(t)
         local data = t.data
         local display = t.display
@@ -224,6 +270,7 @@ local logger = {
         data.outgoing.packets = process_pattern(display.outgoing.pattern)
         data.incoming.exclude = display.incoming.exclude
         data.outgoing.exclude = display.outgoing.exclude
+
         display.active = true
         display.visible = true
 
@@ -237,6 +284,7 @@ local logger = {
         data.outgoing.packets = list()
         data.incoming.exclude = false
         data.outgoing.exclude = false
+
         display.active = false
 
         settings.save(options)
@@ -258,13 +306,13 @@ local tracker = {
             exclude = false,
         },
     },
+    running = function(t)
+        return t.display.active
+    end,
     visible = function(t, value)
         t.display.visible = value
 
         settings.save(options)
-    end,
-    running = function(t)
-        return t.display.active
     end,
     start = function(t)
         local data = t.data
@@ -274,6 +322,7 @@ local tracker = {
         data.outgoing.packets = process_pattern(display.outgoing.pattern)
         data.incoming.exclude = display.incoming.exclude
         data.outgoing.exclude = display.outgoing.exclude
+
         display.active = true
         display.visible = true
 
@@ -287,12 +336,118 @@ local tracker = {
         data.outgoing.packets = list()
         data.incoming.exclude = false
         data.outgoing.exclude = false
+
         display.active = false
 
         settings.save(options)
     end,
 }
 
+local parse_string_value
+do
+    local math_abs = math.abs
+    local string_char = string.char
+
+    parse_string_value = function(value, type, length)
+        if type == 'int' then
+            local num = tonumber(value)
+            if num < 0x100 and (length <= 1 or length == nil) then
+                return string_char(num % 0x100)
+            elseif num < 0x10000 and (length <= 2 or length == nil) then
+                return string_char(num % 0x100, num / 0x100 % 0x100)
+            else
+                return string_char(num % 0x100, num / 0x100 % 0x100, num / 0x10000 % 0x10, num / 0x1000000 % 0x1000)
+            end
+
+        elseif type == 'string' then
+            return value
+
+        elseif type == 'hex' then
+            local index = 1
+            local length = #value
+            local current = nil
+            local str = ''
+
+            while index < length do
+                local char = value[index]
+                if char ~= ' ' and chat ~= '-' then
+                    local num = tonumber(char, 0x10)
+                    if not num then
+                        return ''
+                    end
+
+                    if current then
+                        str = str .. string_char(current + num)
+                        current = nil
+                    else
+                        current = num * 0x10
+                    end
+                end
+
+                index = index + 1
+            end
+
+            return str
+        end
+    end
+end
+
+local scanner = {
+    display = options.scanner,
+    window_state = init_state(options.scanner, {
+        title = 'Packet Viewer Scanner',
+    }),
+    data = {
+        value = '',
+        incoming = {
+            packets = list(),
+            exclude = true,
+        },
+        outgoing = {
+            packets = list(),
+            exclude = true,
+        },
+    },
+    running = function(t)
+        return t.display.active
+    end,
+    visible = function(t, value)
+        t.display.visible = value
+
+        settings.save(options)
+    end,
+    start = function(t)
+        local data = t.data
+        local display = t.display
+
+        data.value = parse_string_value(display.value, display.type)
+        data.incoming.packets = process_pattern(display.incoming.pattern)
+        data.outgoing.packets = process_pattern(display.outgoing.pattern)
+        data.incoming.exclude = display.incoming.exclude
+        data.outgoing.exclude = display.outgoing.exclude
+
+        display.active = true
+        display.visible = true
+
+        settings.save(options)
+    end,
+    stop = function(t)
+        local data = t.data
+        local display = t.display
+
+        data.value = nil
+        data.incoming.packets = list()
+        data.outgoing.packets = list()
+        data.incoming.exclude = true
+        data.outgoing.exclude = true
+
+        display.active = false
+
+        settings.save(options)
+    end,
+}
+
+-- Initialize logger
 do
     local data = logger.data
     local display = logger.display
@@ -303,6 +458,7 @@ do
     data.outgoing.exclude = display.outgoing.exclude
 end
 
+-- Initialize tracker
 do
     local data = tracker.data
     local display = tracker.display
@@ -313,18 +469,22 @@ do
     data.outgoing.exclude = display.outgoing.exclude
 end
 
+-- Initialize scanner
+do
+    local data = scanner.data
+    local display = scanner.display
+
+    data.value = parse_string_value(display.value, display.type)
+    data.incoming.packets = process_pattern(display.incoming.pattern)
+    data.outgoing.packets = process_pattern(display.outgoing.pattern)
+    data.incoming.exclude = display.incoming.exclude
+    data.outgoing.exclude = display.outgoing.exclude
+end
+
 local tracked = list()
 local logged = queue()
 
-local scanner = {
-    display = options.scanner,
-    window_state = init_state(options.scanner, {
-        title = 'Packet Viewer Scanner',
-    }),
-    running = function(t)
-        return false
-    end,
-}
+-- Precomputing hex display arrays
 
 local hex_raw = {}
 local hex_raw_3 = {}
@@ -632,104 +792,180 @@ do
 end
 
 ui.display(function()
+    local y_current = 0
+
     local window = ui.window
     local location = ui.location
     local text = ui.text
     local edit = ui.edit
     local check = ui.check
+    local radio = ui.radio
     local button = ui.button
+    local size = ui.size
+
+    local pos = function(x, y_off)
+        y_current = y_current + y_off
+        location(x, y_current)
+    end
 
     local bottom_x = 10
     local bottom_y = windower.settings.client_size.height - 18
+
+    local show = dashboard.display.show
+    dashboard.window_state.height =
+        (show.logger and 150 or 50) +
+        (show.tracker and 150 or 50) +
+        (show.scanner and 200 or 50)
 
     if dashboard.display.visible then
         local closed
         dashboard.window_state, closed = window('pv_window', dashboard.window_state, function()
             -- Logging
-            local y_log = 10
             do
                 local display = logger.display
                 local incoming = display.incoming
                 local outgoing = display.outgoing
 
-                location(10, y_log + 0)
-                text('[Logging]{bold 16px} ' .. (logger:running() and '[on]{green}' or '[off]{red}'))
+                local active = logger:running()
 
-                location(20, y_log + 30)
-                text('Incoming IDs')
-                location(190, y_log + 30)
-                text('Outgoing IDs')
+                pos(10, 10)
+                text('[Logging]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
 
-                location(20, y_log + 50)
-                incoming.pattern = edit('pv_log_pattern_incoming', incoming.pattern)
-                location(190, y_log + 50)
-                outgoing.pattern = edit('pv_log_pattern_outgoing', outgoing.pattern)
+                if show.logger then
+                    pos(20, 30)
+                    text('Incoming IDs')
+                    pos(190, 0)
+                    text('Outgoing IDs')
 
-                location(18, y_log + 80)
-                if check('pv_log_exclude_incoming', 'Exclude IDs', incoming.exclude) then
-                    incoming.exclude = not incoming.exclude
-                end
-                location(188, y_log + 80)
-                if check('pv_log_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
-                    outgoing.exclude = not outgoing.exclude
-                end
+                    pos(20, 20)
+                    incoming.pattern = edit('pv_log_pattern_incoming', incoming.pattern)
+                    pos(190, 0)
+                    outgoing.pattern = edit('pv_log_pattern_outgoing', outgoing.pattern)
 
-                location(20, y_log + 100)
-                if button('pv_log_start', 'Start logger') then
-                    logger:start()
-                end
-                location(120, y_log + 100)
-                if button('pv_log_stop', 'Stop logger') then
-                    logger:stop()
+                    pos(18, 30)
+                    if check('pv_log_exclude_incoming', 'Exclude IDs', incoming.exclude) then
+                        incoming.exclude = not incoming.exclude
+                    end
+                    pos(188, 0)
+                    if check('pv_log_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
+                        outgoing.exclude = not outgoing.exclude
+                    end
+
+                    pos(20, 20)
+                    if button('pv_log_start', active and 'Restart logger' or 'Start logger') then
+                        logger:start()
+                    end
+                    pos(120, 0)
+                    if button('pv_log_stop', 'Stop logger', { enabled = active }) then
+                        logger:stop()
+                    end
                 end
             end
 
             -- Tracking
-            local y_track = y_log + 130
             do
                 local display = tracker.display
                 local incoming = display.incoming
                 local outgoing = display.outgoing
 
-                location(10, y_track + 0)
-                text('[Tracking]{bold 16px} ' .. (tracker:running() and '[on]{green}' or '[off]{red}'))
+                local active = tracker:running()
 
-                location(20, y_track + 30)
-                text('Incoming IDs')
-                location(190, y_track + 30)
-                text('Outgoing IDs')
+                pos(10, 50)
+                text('[Tracking]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
 
-                location(20, y_track + 50)
-                incoming.pattern = edit('pv_track_pattern_incoming', incoming.pattern)
-                location(190, y_track + 50)
-                outgoing.pattern = edit('pv_track_pattern_outgoing', outgoing.pattern)
+                if show.tracker then
+                    pos(20, 30)
+                    text('Incoming IDs')
+                    pos(190, 0)
+                    text('Outgoing IDs')
 
-                location(18, y_track + 80)
-                if check('pv_track_exclude_incoming', 'Exclude IDs', incoming.exclude) then
-                    incoming.exclude = not incoming.exclude
-                end
-                location(188, y_track + 80)
-                if check('pv_track_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
-                    outgoing.exclude = not outgoing.exclude
-                end
+                    pos(20, 20)
+                    incoming.pattern = edit('pv_track_pattern_incoming', incoming.pattern)
+                    pos(190, 0)
+                    outgoing.pattern = edit('pv_track_pattern_outgoing', outgoing.pattern)
 
-                location(20, y_track + 100)
-                if button('pv_track_start', 'Start tracker') then
-                    tracker:start()
-                end
-                location(120, y_track + 100)
-                if button('pv_track_stop', 'Stop tracker') then
-                    tracker:stop()
+                    pos(18, 30)
+                    if check('pv_track_exclude_incoming', 'Exclude IDs', incoming.exclude) then
+                        incoming.exclude = not incoming.exclude
+                    end
+                    pos(188, 0)
+                    if check('pv_track_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
+                        outgoing.exclude = not outgoing.exclude
+                    end
+
+                    pos(20, 20)
+                    if button('pv_track_start', active and 'Restart tracker' or 'Start tracker') then
+                        tracker:start()
+                    end
+                    pos(120, 0)
+                    if button('pv_track_stop', 'Stop tracker', { enabled = active }) then
+                        tracker:stop()
+                    end
                 end
             end
 
             -- Scanning
-            local y_scan = y_track + 130
             do
-                location(10, y_scan + 0)
-                text('[Scanning]{bold 16px} ' .. (scanner:running() and '[on]{green}' or '[off]{red}'))
-                location(20, y_scan + 30)
-                text('Not yet implemented...')
+                local display = scanner.display
+                local incoming = display.incoming
+                local outgoing = display.outgoing
+
+                local active = scanner:running()
+
+                pos(10, 50)
+                text('[Scanning]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
+
+                if show.scanner then
+                    pos(20, 30)
+                    text('Scan for value')
+                    pos(100, -3)
+                    size(250, 23)
+                    display.value = edit('pv_scan_value', display.value)
+                    pos(0, 3)
+
+                    pos(20, 30)
+                    text('Type')
+                    pos(100, 0)
+                    if radio('pv_scan_type_int', 'Integer', display.type == 'int') then
+                        display.type = 'int'
+                    end
+                    pos(180, 0)
+                    if radio('pv_scan_type_string', 'String', display.type == 'string') then
+                        display.type = 'string'
+                    end
+                    pos(260, 0)
+                    if radio('pv_scan_type_hex', 'Hex array', display.type == 'hex') then
+                        display.type = 'hex'
+                    end
+
+                    pos(20, 30)
+                    text('Incoming IDs')
+                    pos(190, 0)
+                    text('Outgoing IDs')
+
+                    pos(20, 20)
+                    incoming.pattern = edit('pv_scan_pattern_incoming', incoming.pattern)
+                    pos(190, 0)
+                    outgoing.pattern = edit('pv_scan_pattern_outgoing', outgoing.pattern)
+
+                    pos(18, 30)
+                    if check('pv_scan_exclude_incoming', 'Exclude IDs', incoming.exclude) then
+                        incoming.exclude = not incoming.exclude
+                    end
+                    pos(188, 0)
+                    if check('pv_scan_exclude_outgoing', 'Exclude IDs', outgoing.exclude) then
+                        outgoing.exclude = not outgoing.exclude
+                    end
+
+                    pos(20, 20)
+                    if button('pv_scan_start', active and 'Restart scanner' or 'Start scanner') then
+                        scanner:start()
+                    end
+                    pos(120, 0)
+                    if button('pv_scan_stop', 'Stop scanner', { enabled = active }) then
+                        scanner:stop()
+                    end
+                end
             end
         end)
 
@@ -779,14 +1015,12 @@ ui.display(function()
     do
         location(bottom_x, bottom_y)
         if button('pv_window_maximize', 'Packet Viewer') then
-            dashboard.display.visible = not dashboard.display.visible
-            settings.save(options)
+            dashboard:visible(not dashboard.display.visible)
         end
         bottom_x = bottom_x + 89
         location(bottom_x, bottom_y)
-        if button('pv_log_window_maximize', 'PV - Logging', {enabled = false}) then
-            logger.display.visible = not logger.display.visible
-            settings.save(options)
+        if button('pv_log_window_maximize', 'PV - Logging') then
+            logger:visible(not logger.display.visible)
         end
         bottom_x = bottom_x + 85
         location(bottom_x, bottom_y)
@@ -795,9 +1029,8 @@ ui.display(function()
         end
         bottom_x = bottom_x + 85
         location(bottom_x, bottom_y)
-        if button('pv_scan_window_maximize', 'PV - Scanning', {enabled = false}) then
-            scanner.display.visible = not scanner.display.visible
-            settings.save(options)
+        if button('pv_scan_window_maximize', 'PV - Scanning') then
+            scanner:visible(not scanner.display.visible)
         end
     end
 
