@@ -44,7 +44,7 @@ local options = settings.load({
         x = 370,
         y = 0,
         width = 960,
-        height = 330,
+        height = 340,
         incoming = {
             pattern = '',
             exclude = false,
@@ -483,13 +483,14 @@ end
 
 local tracked = list()
 local logged = queue()
+local scanned = queue()
 
 -- Precomputing hex display arrays
 
 local hex_raw = {}
-local hex_raw_3 = {}
 local hex_space = {}
 local hex_zero = {}
+local hex_zero_3 = {}
 do
     local string_format = string.format
 
@@ -500,7 +501,7 @@ do
     end
 
     for i = 0x000, 0x200 do
-        hex_raw_3[i] = string_format('%03X', i)
+        hex_zero_3[i] = string_format('%03X', i)
     end
 end
 
@@ -978,17 +979,8 @@ ui.display(function()
         local closed
         logger.window_state, closed = window('pv_log_window', logger.window_state, function()
             for i = 1, #logged do
-                local y = 20 * i - 16
-                local log = logged[i]
-
-                location(10, y)
-                text(log.timestamp)
-                location(80, y)
-                text(log.direction)
-                location(150, y)
-                text(log.id)
-                location(200, y)
-                text(log.hex)
+                location(10, 16 * (i - 1) + 10)
+                text(logged[i])
             end
         end)
 
@@ -1091,13 +1083,8 @@ local log_packet = function(packet)
     end
 
     local info = packet._info
-    logged:push({
-        timestamp = '[' .. os.date('%H:%M:%S', os.time()) .. ']',
-        direction = info.direction,
-        id = ' 0x' .. hex_raw_3[info.id],
-        hex = hex(info.data),
-    })
-    if #logged > 0x10 then
+    logged:push('[' .. os.date('%H:%M:%S', os.time()) .. '  ' .. info.direction .. '  0x' .. hex_zero_3[info.id] .. '   ' .. hex(info.data) .. ']{Consolas}')
+    if #logged > 0x14 then
         logged:pop()
     end
 end
@@ -1110,12 +1097,39 @@ local track_packet = function(packet)
     tracked:add(packet)
 end
 
-local scan_packet = function(packet)
-    if not check_filters(scanner, packet) then
-        return
-    end
+local scan_packet
+do
+    local string_find = string.find
 
-    --TODO
+    scan_packet = function(packet)
+        if not check_filters(scanner, packet) then
+            return
+        end
+
+        local info = packet._info
+        local data = info.data
+        local positions = list()
+        local start = 0
+        repeat
+            start = string_find(data, scanner.data.value, start + 1)
+            if start then
+                positions:add(start)
+            end
+        until not start
+
+        if positions:any() then
+            scanned:add({
+                timestamp = '[' .. os.date('%H:%M:%S', os.time()) .. ']',
+                direction = info.direction,
+                id = ' 0x' .. hex_zero_3[info.id],
+                positions = 'Found at positions: ' .. tostring(positions:select(function(pos) return '0x' .. hex_zero[pos] end)),
+            })
+
+            if #scanned > 10 then
+                scanned:pop()
+            end
+        end
+    end
 end
 
 packets:register(function(packet)
