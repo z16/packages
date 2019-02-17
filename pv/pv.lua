@@ -75,8 +75,8 @@ local options = settings.load({
         visible = false,
         x = 370,
         y = 0,
-        width = 360,
-        height = 240,
+        width = 500,
+        height = 340,
         value = '',
         type = '',
         length = 1,
@@ -347,13 +347,14 @@ local parse_string_value
 do
     local math_abs = math.abs
     local string_char = string.char
+    local string_sub = string.sub
 
     parse_string_value = function(value, type, length)
         if type == 'int' then
             local num = tonumber(value)
-            if num < 0x100 and (length <= 1 or length == nil) then
+            if num < 0x100 and (length == nil or length <= 1) then
                 return string_char(num % 0x100)
-            elseif num < 0x10000 and (length <= 2 or length == nil) then
+            elseif num < 0x10000 and (length == nil or length <= 2) then
                 return string_char(num % 0x100, num / 0x100 % 0x100)
             else
                 return string_char(num % 0x100, num / 0x100 % 0x100, num / 0x10000 % 0x10, num / 0x1000000 % 0x1000)
@@ -368,8 +369,8 @@ do
             local current = nil
             local str = ''
 
-            while index < length do
-                local char = value[index]
+            while index <= length do
+                local char = string_sub(value, index, index)
                 if char ~= ' ' and chat ~= '-' then
                     local num = tonumber(char, 0x10)
                     if not num then
@@ -959,7 +960,7 @@ ui.display(function()
                     end
 
                     pos(20, 20)
-                    if button('pv_scan_start', active and 'Restart scanner' or 'Start scanner') then
+                    if button('pv_scan_start', active and 'Restart scanner' or 'Start scanner', { enabled = display.value ~= '' and display.type ~= '' }) then
                         scanner:start()
                     end
                     pos(120, 0)
@@ -1007,6 +1008,10 @@ ui.display(function()
     if scanner.display.visible then
         local closed
         scanner.window_state, closed = window('pv_scan_window', scanner.window_state, function()
+            for i = 1, #scanned do
+                location(10, 20 * (i - 1) + 10)
+                text(scanned[i])
+            end
         end)
 
         if closed then
@@ -1083,8 +1088,13 @@ local log_packet = function(packet)
     end
 
     local info = packet._info
-    logged:push('[' .. os.date('%H:%M:%S', os.time()) .. '  ' .. info.direction .. '  0x' .. hex_zero_3[info.id] .. '   ' .. hex(info.data) .. ']{Consolas}')
-    if #logged > 0x14 then
+    logged:push('[' ..
+        os.date('%H:%M:%S', os.time()) .. '  ' ..
+        info.direction .. '  ' ..
+        '0x' .. hex_zero_3[info.id] .. '   ' ..
+        hex(info.data) ..
+    ']{Consolas}')
+    if #logged > 20 then
         logged:pop()
     end
 end
@@ -1100,6 +1110,7 @@ end
 local scan_packet
 do
     local string_find = string.find
+    local table_concat = table.concat
 
     scan_packet = function(packet)
         if not check_filters(scanner, packet) then
@@ -1118,14 +1129,13 @@ do
         until not start
 
         if positions:any() then
-            scanned:add({
-                timestamp = '[' .. os.date('%H:%M:%S', os.time()) .. ']',
-                direction = info.direction,
-                id = ' 0x' .. hex_zero_3[info.id],
-                positions = 'Found at positions: ' .. tostring(positions:select(function(pos) return '0x' .. hex_zero[pos] end)),
-            })
-
-            if #scanned > 10 then
+            scanned:push('[' ..
+                os.date('%H:%M:%S', os.time()) .. '  ' ..
+                info.direction .. '  ' ..
+                '0x' .. hex_zero_3[info.id] .. '   ' ..
+                'Found at positions: ' .. table_concat(positions:select(function(pos) return '0x' .. hex_zero[pos - 1] end):totable(), ', ') ..
+            ']{Consolas}')
+            if #scanned > 20 then
                 scanned:pop()
             end
         end
@@ -1133,12 +1143,7 @@ do
 end
 
 packets:register(function(packet)
-    -- Logging
     log_packet(packet)
-
-    -- Tracking
     track_packet(packet)
-
-    -- Scanning
     scan_packet(packet)
 end)
