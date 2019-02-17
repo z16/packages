@@ -1,4 +1,5 @@
 local bit = require('bit')
+local command = require('command')
 local entities = require('entities')
 local ffi = require('ffi')
 local list = require('list')
@@ -78,7 +79,7 @@ local options = settings.load({
         width = 500,
         height = 340,
         value = '',
-        type = '',
+        type = 'int',
         length = 1,
         incoming = {
             pattern = '',
@@ -254,6 +255,13 @@ local logger = {
             exclude = false,
         },
     },
+    valid = function(t)
+        local display = t.display
+        local incoming = display.incoming
+        local outgoing = display.outgoing
+
+        return incoming.pattern ~= '' or incoming.exclude or outgoing.pattern ~= '' or outgoing.exclude
+    end,
     running = function(t)
         return t.display.active
     end,
@@ -306,6 +314,13 @@ local tracker = {
             exclude = false,
         },
     },
+    valid = function(t)
+        local display = t.display
+        local incoming = display.incoming
+        local outgoing = display.outgoing
+
+        return incoming.pattern ~= '' or incoming.exclude or outgoing.pattern ~= '' or outgoing.exclude
+    end,
     running = function(t)
         return t.display.active
     end,
@@ -352,7 +367,9 @@ do
     parse_string_value = function(value, type, length)
         if type == 'int' then
             local num = tonumber(value)
-            if num < 0x100 and (length == nil or length <= 1) then
+            if not num then
+                return ''
+            elseif num < 0x100 and (length == nil or length <= 1) then
                 return string_char(num % 0x100)
             elseif num < 0x10000 and (length == nil or length <= 2) then
                 return string_char(num % 0x100, num / 0x100 % 0x100)
@@ -409,6 +426,9 @@ local scanner = {
             exclude = true,
         },
     },
+    valid = function(t)
+        return t.display.value ~= ''
+    end,
     running = function(t)
         return t.display.active
     end,
@@ -777,7 +797,7 @@ do
             local ftype = ftypes[info.direction][info.id]
             local types = ftype and ftype.types
             if types then
-                ftype = types[p[ftype.key]]
+                ftype = types[packet[ftype.key]]
             end
 
             local color_table = build_color_table(info, ftype)
@@ -854,7 +874,7 @@ ui.display(function()
                     end
 
                     pos(20, 20)
-                    if button('pv_log_start', active and 'Restart logger' or 'Start logger') then
+                    if button('pv_log_start', active and 'Restart logger' or 'Start logger', { enabled = logger:valid() }) then
                         logger:start()
                     end
                     pos(120, 0)
@@ -896,7 +916,7 @@ ui.display(function()
                     end
 
                     pos(20, 20)
-                    if button('pv_track_start', active and 'Restart tracker' or 'Start tracker') then
+                    if button('pv_track_start', active and 'Restart tracker' or 'Start tracker', { enabled = tracker:valid() }) then
                         tracker:start()
                     end
                     pos(120, 0)
@@ -960,7 +980,7 @@ ui.display(function()
                     end
 
                     pos(20, 20)
-                    if button('pv_scan_start', active and 'Restart scanner' or 'Start scanner', { enabled = display.value ~= '' and display.type ~= '' }) then
+                    if button('pv_scan_start', active and 'Restart scanner' or 'Start scanner', { enabled = scanner:valid() }) then
                         scanner:start()
                     end
                     pos(120, 0)
@@ -1147,3 +1167,64 @@ packets:register(function(packet)
     track_packet(packet)
     scan_packet(packet)
 end)
+
+local pv = command.new('pv')
+
+local handle_packet_filter = function(direction, exclude, ...)
+    direction.pattern = table.concat(list(...):select(function(id) return '0x' .. hex_zero_3[id] end):totable())
+    direction.exclude = exclude
+end
+
+local base_command = function(handler, direction, ...)
+    if direction == 's' then
+        handler:stop()
+        return
+    end
+
+    local exclude = direction:sub(1, 1) == 'n'
+    if exclude then
+        direction = direction:sub(2)
+    end
+
+    local display = handler.display
+
+    if direction == 'i' then
+        handle_packet_filter(display.incoming, exclude, ...)
+    elseif direction == 'o' then
+        handle_packet_filter(display.outgoing, exclude, ...)
+    elseif direction == 'b' then
+        handle_packet_filter(display.incoming, exclude, ...)
+        handle_packet_filter(display.outgoing, exclude, ...)
+    end
+
+    if handler:valid() then
+        handler:start()
+    end
+end
+
+local log_command = function(direction, ...)
+    base_command(logger, direction, ...)
+end
+
+local track_command = function(direction, ...)
+    base_command(tracker, direction, ...)
+end
+
+local scan_filter_command = function(direction, ...)
+    base_command(scanner, direction, ...)
+end
+
+local scan_for_command = function(type, value)
+    local display = scanner.display
+    display.value = value
+    display.type = type
+
+    if scanner:valid() then
+        scanner:start()
+    end
+end
+
+pv:register('log', log_command, '<direction:one_of(i,ni,o,no,b,nb,s)> [ids:number(0x001,0x1FF)]*')
+pv:register('track', track_command, '<direction:one_of(i,ni,o,no,b,nb,s)> [ids:number(0x001,0x1FF)]*')
+pv:register('scan', 'for', scan_for_command, '<type:one_of(int,string,hex)> <value:text>')
+pv:register('scan', 'filter', scan_filter_command, '<direction:one_of(i,ni,o,no,b,nb,s)> [ids:number(0x001,0x1FF)]*')
