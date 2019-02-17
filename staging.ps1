@@ -2,7 +2,7 @@ $includePackages = "pv", "v", "util"
 
 $knownPackages = Get-ChildItem -Directory |
     Where-Object {
-        if (Test-Path variable:global:includePackages) {
+        if (Test-Path variable:local:includePackages) {
             $includePackages.Contains([System.IO.Path]::GetFileName($_))
         } else {
             Test-Path (Join-Path $_ "manifest.xml")
