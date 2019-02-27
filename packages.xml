@@ -1,6 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <packages>
   <package>
+    <name>ja0</name>
+    <version>1.0.0.0</version>
+    <type>addon</type>
+    <dependencies>
+      <dependency>target</dependency>
+    </dependencies>
+    <files>
+      <file size="283">ja0/ja0.lua</file>
+      <file size="169">ja0/manifest.xml</file>
+    </files>
+  </package>
+  <package>
     <name>pv</name>
     <version>3.0.0.0</version>
     <type>addon</type>
