@@ -1,12 +1,13 @@
 <package>
   <name>pv</name>
-  <version>3.0.0.0</version>
+  <version>4.0.0.0</version>
   <type>addon</type>
   <dependencies>
     <dependency>entities</dependency>
     <dependency>list</dependency>
     <dependency>packet_service</dependency>
     <dependency>packets</dependency>
+    <dependency>set</dependency>
     <dependency>queue</dependency>
     <dependency>resources</dependency>
     <dependency>settings</dependency>

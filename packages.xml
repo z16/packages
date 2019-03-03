@@ -14,23 +14,24 @@
   </package>
   <package>
     <name>pv</name>
-    <version>3.0.0.0</version>
+    <version>4.0.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
       <dependency>list</dependency>
       <dependency>packet_service</dependency>
       <dependency>packets</dependency>
+      <dependency>set</dependency>
       <dependency>queue</dependency>
       <dependency>resources</dependency>
       <dependency>settings</dependency>
     </dependencies>
     <files>
-      <file size="403">pv/manifest.xml</file>
+      <file size="437">pv/manifest.xml</file>
       <file size="1857">pv/pv.lua</file>
       <file size="5282">pv/component/logger.lua</file>
       <file size="8888">pv/component/scanner.lua</file>
-      <file size="13923">pv/component/tracker.lua</file>
+      <file size="15801">pv/component/tracker.lua</file>
       <file size="1597">pv/pv/dashboard.lua</file>
       <file size="4715">pv/pv/pv.lua</file>
       <file size="2129">pv/pv/state.lua</file>

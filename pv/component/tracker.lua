@@ -4,6 +4,7 @@ local list = require('list')
 local math = require('math')
 local packets = require('packets')
 local resources = require('resources')
+local set = require('set')
 local settings = require('settings')
 local shared = require('shared')
 local string = require('string')
@@ -387,9 +388,65 @@ do
         end
     end
 
+    local build_packet_extras
+    do
+        local table_concat = table.concat
+        local table_sort = table.sort
+
+        local build_extra_lines
+        build_extra_lines = function(t, indent)
+            indent = indent or ''
+
+            local lines = {}
+            local line_count = 0
+
+            for key in pairs(t) do
+                line_count = line_count + 1
+                lines[line_count] = key
+            end
+
+            table_sort(lines)
+            for i = 1, line_count do
+                local key = lines[i]
+                local value = t[key]
+                lines[i] = indent .. '[' .. tostring(key) .. ']{skyblue}: ' .. (type(value) == 'table'
+                    and '\n' .. build_extra_lines(value, indent .. '    ')
+                    or '[' .. tostring(value) .. ']{pink}')
+            end
+
+            return table_concat(lines, '\n')
+        end
+
+        build_packet_extras = function(packet, ftype)
+            local arranged = ftype.arranged
+            local arranged_count = #arranged
+            local arranged_labels = set()
+            for i = 1, arranged_count do
+                arranged_labels:add(arranged[i].label)
+            end
+
+            local subset = {}
+
+            local info = packet._info
+            packet._info = nil
+            for key, value in pairs(packet) do
+                if not arranged_labels:contains(key) then
+                    subset[key] = value
+                end
+            end
+            packet._info = info
+
+            return next(subset) and build_extra_lines(subset)
+        end
+    end
+
     local display_packet
     do
-        local packet_display_cache = {}
+        local noref = {
+            __mode = 'k',
+        }
+
+        local packet_display_cache = setmetatable({}, noref)
 
         display_packet = function(packet)
             local cached = packet_display_cache[p]
@@ -410,7 +467,9 @@ do
                 local table = build_packet_table(data, ftype, color_table)
                 local fields = ftype and build_packet_fields(packet, ftype, color_table)
 
-                cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. ']{Consolas 12px}'
+                local extras = ftype and build_packet_extras(packet, ftype)
+
+                cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras) .. ']{Consolas 12px}'
                 packet_display_cache[packet] = cached
             end
 
