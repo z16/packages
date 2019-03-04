@@ -469,7 +469,7 @@ do
 
                 local extras = ftype and build_packet_extras(packet, ftype)
 
-                cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras) .. ']{Consolas 12px}'
+                cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
                 packet_display_cache[packet] = cached
             end
 
