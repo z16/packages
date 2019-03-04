@@ -2,6 +2,7 @@ local bit = require('bit')
 local entities = require('entities')
 local list = require('list')
 local math = require('math')
+local os = require('os')
 local packets = require('packets')
 local resources = require('resources')
 local set = require('set')
@@ -74,6 +75,7 @@ local data_incoming = data.incoming
 local data_outgoing = data.outgoing
 
 local hex_zero = pv.hex.zero
+local hex_zero_3 = pv.hex.zero_3
 local hex_space = pv.hex.space
 local hex_raw = pv.hex.raw
 
@@ -251,6 +253,222 @@ do
     end
 end
 
+local build_packet_table
+do
+    local table_concat = table.concat
+    local string_byte = string.byte
+    local string_char = string.char
+    local math_floor = math.floor
+    local band = bit.band
+    local bnot = bit.bnot
+
+    local lookup_byte = {}
+    for i = 0x20, 0x7E do
+        lookup_byte[i] = string_char(i)
+    end
+    local escape = {
+        '\\',
+        '[',
+        ']',
+        '{',
+        '}',
+    }
+    for i = 1, #escape do
+        local char = escape[i]
+        lookup_byte[string_byte(char)] = '\\' .. char
+    end
+
+    build_packet_table = function(data, ftype, color_table)
+        local address = 0
+        local base_offset = 0
+        local end_data = #data
+        local end_char = band(end_data + 0xF, bnot(0xF))
+
+        local lookup_hex = {}
+        local lookup_char = {}
+        for i = end_data, end_char - 1 do
+            lookup_hex[i] = '--'
+            lookup_char[i] = '-'
+            color_table[i] = '#606060'
+        end
+        for i = base_offset, end_data - 1 do
+            local byte = string_byte(data, i - base_offset + 1)
+            lookup_hex[i] = hex_zero[byte]
+            lookup_char[i] = lookup_byte[byte] or '.'
+        end
+
+        local lines = {}
+        lines[1] = '  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
+        lines[2] = '----------------------------------------------------------------------'
+        for row = 0, end_char / 0x10 - 1 do
+            local index_offset = 0x10 * row
+            local prefix = hex_raw[math_floor((address - base_offset + index_offset) / 0x10)] .. ' | '
+            local hex_table = {}
+            local char_table = {}
+            for i = 0, 0xF do
+                local pos = index_offset + i
+                local color = color_table[pos] or '#A0A0A0'
+                local hex = lookup_hex[pos]
+                local char = lookup_char[pos]
+                local suffix = ']{' .. color ..'}'
+                hex_table[i + 1] = '[' .. hex .. suffix
+                char_table[i + 1] = '[' .. char .. suffix
+            end
+
+            lines[row + 3] = prefix .. table_concat(hex_table, ' ') .. ' | ' .. table_concat(char_table)
+        end
+
+        return table_concat(lines, '\n')
+    end
+end
+
+local build_color_table
+do
+    local math_floor = math.floor
+
+    local color_table_cache = {}
+
+    local make_table
+    make_table = function(info, ftype, color_table)
+        color_table = color_table or {}
+
+        local color_table_count = #color_table
+        local arranged = ftype.arranged
+        local arranged_count = #arranged
+        for i = 1, arranged_count do
+            local field = arranged[i]
+            local position = field.position
+            local type = field.type
+
+            local size = type.size
+            local var_size = type.var_size
+            local bits = type.bits
+
+            local from, to
+            if bits then
+                from = position
+                to = position + math_floor((field.offset + bits) / 8)
+            elseif size == '*' then
+                from = position
+                to = #info.data - 1
+            else
+                from = position
+                to = position + size - 1
+            end
+
+            for index = from, to do
+                if not color_table[index] then
+                    color_table[index] = colors[color_table_count + i]
+                end
+            end
+        end
+
+        return color_table
+    end
+
+    build_color_table = function(info, ftype)
+        if not ftype then
+            return {}
+        end
+
+        local color_table = color_table_cache[ftype]
+        if not color_table then
+            color_table = make_table(info, ftype)
+            color_table_cache[ftype] = color_table
+        end
+
+        --TODO ftype.var_size
+        return color_table
+    end
+end
+
+local build_packet_extras
+do
+    local table_concat = table.concat
+    local table_sort = table.sort
+
+    local build_extra_lines
+    build_extra_lines = function(t, indent)
+        indent = indent or ''
+
+        local lines = {}
+        local line_count = 0
+
+        for key in pairs(t) do
+            line_count = line_count + 1
+            lines[line_count] = key
+        end
+
+        table_sort(lines)
+        for i = 1, line_count do
+            local key = lines[i]
+            local value = t[key]
+            lines[i] = indent .. '[' .. tostring(key) .. ']{skyblue}: ' .. (type(value) == 'table'
+                and '\n' .. build_extra_lines(value, indent .. '    ')
+                or '[' .. tostring(value) .. ']{pink}')
+        end
+
+        return table_concat(lines, '\n')
+    end
+
+    build_packet_extras = function(packet, ftype)
+        local arranged = ftype.arranged
+        local arranged_count = #arranged
+        local arranged_labels = set()
+        for i = 1, arranged_count do
+            arranged_labels:add(arranged[i].label)
+        end
+
+        local subset = {}
+
+        local info = packet._info
+        packet._info = nil
+        for key, value in pairs(packet) do
+            if not arranged_labels:contains(key) then
+                subset[key] = value
+            end
+        end
+        packet._info = info
+
+        return next(subset) and build_extra_lines(subset)
+    end
+end
+
+local display_packet
+do
+    local noref = {
+        __mode = 'k',
+    }
+
+    local packet_display_cache = setmetatable({}, noref)
+
+    display_packet = function(packet)
+        local cached = packet_display_cache[p]
+        if not cached then
+            local info = packet._info
+            local data = info.data
+
+            local ftype = ftypes[info.direction][info.id]
+            local types = ftype and ftype.types
+            if types then
+                ftype = types[packet[ftype.key]]
+            end
+
+            local color_table = build_color_table(info, ftype)
+
+            local table = build_packet_table(data, ftype, color_table)
+            local fields = ftype and build_packet_fields(packet, ftype, color_table)
+
+            local extras = ftype and build_packet_extras(packet, ftype)
+
+            cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
+            packet_display_cache[packet] = cached
+        end
+
+        return cached
+    end
+end
+
 do
     local button = ui.button
     local check = ui.check
@@ -258,224 +476,7 @@ do
     local location = ui.location
     local text = ui.text
     local window = ui.window
-
-    local build_packet_table
-    do
-        local table_concat = table.concat
-        local string_byte = string.byte
-        local string_char = string.char
-        local math_floor = math.floor
-        local band = bit.band
-        local bnot = bit.bnot
-
-        local lookup_byte = {}
-        for i = 0x20, 0x7E do
-            lookup_byte[i] = string_char(i)
-        end
-        local escape = {
-            '\\',
-            '[',
-            ']',
-            '{',
-            '}',
-        }
-        for i = 1, #escape do
-            local char = escape[i]
-            lookup_byte[string_byte(char)] = '\\' .. char
-        end
-
-        build_packet_table = function(data, ftype, color_table)
-            local address = 0
-            local base_offset = 0
-            local end_data = #data
-            local end_char = band(end_data + 0xF, bnot(0xF))
-
-            local lookup_hex = {}
-            local lookup_char = {}
-            for i = end_data, end_char - 1 do
-                lookup_hex[i] = '--'
-                lookup_char[i] = '-'
-                color_table[i] = '#606060'
-            end
-            for i = base_offset, end_data - 1 do
-                local byte = string_byte(data, i - base_offset + 1)
-                lookup_hex[i] = hex_zero[byte]
-                lookup_char[i] = lookup_byte[byte] or '.'
-            end
-
-            local lines = {}
-            lines[1] = '  |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | 0123456789ABCDEF'
-            lines[2] = '----------------------------------------------------------------------'
-            for row = 0, end_char / 0x10 - 1 do
-                local index_offset = 0x10 * row
-                local prefix = hex_raw[math_floor((address - base_offset + index_offset) / 0x10)] .. ' | '
-                local hex_table = {}
-                local char_table = {}
-                for i = 0, 0xF do
-                    local pos = index_offset + i
-                    local color = color_table[pos] or '#A0A0A0'
-                    local hex = lookup_hex[pos]
-                    local char = lookup_char[pos]
-                    local suffix = ']{' .. color ..'}'
-                    hex_table[i + 1] = '[' .. hex .. suffix
-                    char_table[i + 1] = '[' .. char .. suffix
-                end
-
-                lines[row + 3] = prefix .. table_concat(hex_table, ' ') .. ' | ' .. table_concat(char_table)
-            end
-
-            return table_concat(lines, '\n')
-        end
-    end
-
-    local build_color_table
-    do
-        local math_floor = math.floor
-
-        local color_table_cache = {}
-
-        local make_table
-        make_table = function(info, ftype, color_table)
-            color_table = color_table or {}
-
-            local color_table_count = #color_table
-            local arranged = ftype.arranged
-            local arranged_count = #arranged
-            for i = 1, arranged_count do
-                local field = arranged[i]
-                local position = field.position
-                local type = field.type
-
-                local size = type.size
-                local var_size = type.var_size
-                local bits = type.bits
-
-                local from, to
-                if bits then
-                    from = position
-                    to = position + math_floor((field.offset + bits) / 8)
-                elseif size == '*' then
-                    from = position
-                    to = #info.data - 1
-                else
-                    from = position
-                    to = position + size - 1
-                end
-
-                for index = from, to do
-                    if not color_table[index] then
-                        color_table[index] = colors[color_table_count + i]
-                    end
-                end
-            end
-
-            return color_table
-        end
-
-        build_color_table = function(info, ftype)
-            if not ftype then
-                return {}
-            end
-
-            local color_table = color_table_cache[ftype]
-            if not color_table then
-                color_table = make_table(info, ftype)
-                color_table_cache[ftype] = color_table
-            end
-
-            --TODO ftype.var_size
-            return color_table
-        end
-    end
-
-    local build_packet_extras
-    do
-        local table_concat = table.concat
-        local table_sort = table.sort
-
-        local build_extra_lines
-        build_extra_lines = function(t, indent)
-            indent = indent or ''
-
-            local lines = {}
-            local line_count = 0
-
-            for key in pairs(t) do
-                line_count = line_count + 1
-                lines[line_count] = key
-            end
-
-            table_sort(lines)
-            for i = 1, line_count do
-                local key = lines[i]
-                local value = t[key]
-                lines[i] = indent .. '[' .. tostring(key) .. ']{skyblue}: ' .. (type(value) == 'table'
-                    and '\n' .. build_extra_lines(value, indent .. '    ')
-                    or '[' .. tostring(value) .. ']{pink}')
-            end
-
-            return table_concat(lines, '\n')
-        end
-
-        build_packet_extras = function(packet, ftype)
-            local arranged = ftype.arranged
-            local arranged_count = #arranged
-            local arranged_labels = set()
-            for i = 1, arranged_count do
-                arranged_labels:add(arranged[i].label)
-            end
-
-            local subset = {}
-
-            local info = packet._info
-            packet._info = nil
-            for key, value in pairs(packet) do
-                if not arranged_labels:contains(key) then
-                    subset[key] = value
-                end
-            end
-            packet._info = info
-
-            return next(subset) and build_extra_lines(subset)
-        end
-    end
-
-    local display_packet
-    do
-        local noref = {
-            __mode = 'k',
-        }
-
-        local packet_display_cache = setmetatable({}, noref)
-
-        display_packet = function(packet)
-            local cached = packet_display_cache[p]
-            if not cached then
-                local info = packet._info
-                local data = info.data
-
-                location(10, 10)
-
-                local ftype = ftypes[info.direction][info.id]
-                local types = ftype and ftype.types
-                if types then
-                    ftype = types[packet[ftype.key]]
-                end
-
-                local color_table = build_color_table(info, ftype)
-
-                local table = build_packet_table(data, ftype, color_table)
-                local fields = ftype and build_packet_fields(packet, ftype, color_table)
-
-                local extras = ftype and build_packet_extras(packet, ftype)
-
-                cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
-                packet_display_cache[packet] = cached
-            end
-
-            text(cached)
-        end
-    end
+    local os_date = os.date
 
     tracker.dashboard = function(pos)
         local active = tracker.running()
@@ -516,13 +517,42 @@ do
         title = 'Packet Viewer Tracker',
     })
 
+    local display_index
+
     tracker.window = function()
-        local last_index = #tracked
-        if last_index == 0 then
+        local tracked_count = #tracked
+        local index = display_index or tracked_count
+
+        location(10, 10)
+        if button('pv_track_previous', 'Previous', { enabled = index > 1 }) then
+            display_index = index - 1
+        end
+
+        location(150, 10)
+        text('Showing ' .. (display_index and tostring(index) .. '/' or 'latest of ') .. tostring(tracked_count))
+
+        location(300, 10)
+        if button('pv_track_next', 'Next', { enabled = index < tracked_count }) then
+            display_index = index + 1
+        end
+
+        location(395, 10)
+        if button('pv_track_last', 'Show latest', { enabled = display_index ~= nil }) then
+            display_index = nil
+        end
+
+        local packet = tracked[index]
+        if not packet then
             return
         end
 
-        display_packet(tracked[last_index])
+        local info = packet._info
+
+        location(10, 50)
+        text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ']{Consolas}')
+
+        location(10, 80)
+        text(display_packet(packet))
     end
 
     tracker.button = function()
