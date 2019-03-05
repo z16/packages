@@ -13,8 +13,30 @@
     </files>
   </package>
   <package>
+    <name>mv</name>
+    <version>1.0.0.0</version>
+    <type>addon</type>
+    <dependencies>
+      <dependency>account</dependency>
+      <dependency>clipboard</dependency>
+      <dependency>list</dependency>
+      <dependency>memory</dependency>
+      <dependency>settings</dependency>
+      <dependency>world</dependency>
+    </dependencies>
+    <files>
+      <file size="356">mv/manifest.xml</file>
+      <file size="1950">mv/mv.lua</file>
+      <file size="5325">mv/component/browser.lua</file>
+      <file size="3554">mv/component/scanner.lua</file>
+      <file size="1599">mv/mv/dashboard.lua</file>
+      <file size="1899">mv/mv/mv.lua</file>
+      <file size="2129">mv/mv/state.lua</file>
+    </files>
+  </package>
+  <package>
     <name>pv</name>
-    <version>4.1.0.0</version>
+    <version>4.1.0.1</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
@@ -28,7 +50,7 @@
     </dependencies>
     <files>
       <file size="437">pv/manifest.xml</file>
-      <file size="1857">pv/pv.lua</file>
+      <file size="1968">pv/pv.lua</file>
       <file size="5282">pv/component/logger.lua</file>
       <file size="8888">pv/component/scanner.lua</file>
       <file size="16123">pv/component/tracker.lua</file>
