@@ -16,7 +16,7 @@ local defaults = {
 local options = settings.load(defaults, 'pv.lua', true)
 
 local components = list(require('pv.dashboard'))
-for _, component in pairs(options.components) do
+for _, component in ipairs(options.components) do
     components:add(require('component.' .. component))
 end
 
@@ -48,8 +48,13 @@ local render_window = function(component)
 end
 
 local render_button = function(component, x, y)
+    local component_button = component.button
+    if not component_button then
+        return 0
+    end
+
     location(x, y)
-    local caption, size = component.button()
+    local caption, size = component_button()
     if button('pv_' .. component.name .. '_window_toggle', caption) then
         component.show(not component.visible())
     end
