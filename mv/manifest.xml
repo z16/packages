@@ -1,0 +1,13 @@
+<package>
+  <name>mv</name>
+  <version>1.0.0.0</version>
+  <type>addon</type>
+  <dependencies>
+    <dependency>account</dependency>
+    <dependency>clipboard</dependency>
+    <dependency>list</dependency>
+    <dependency>memory</dependency>
+    <dependency>settings</dependency>
+    <dependency>world</dependency>
+  </dependencies>
+</package>
