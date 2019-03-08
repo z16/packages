@@ -209,9 +209,9 @@ do
         browser.stop()
     end
 
-    account.login:register(init)
-    account.logout:register(init)
-    world.zone_change:register(init)
+    account.login:register(reset)
+    account.logout:register(reset)
+    world.zone_change:register(reset)
 
     reset()
 end

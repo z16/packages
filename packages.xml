@@ -14,7 +14,7 @@
   </package>
   <package>
     <name>mv</name>
-    <version>1.0.0.0</version>
+    <version>1.0.0.1</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -27,7 +27,7 @@
     <files>
       <file size="356">mv/manifest.xml</file>
       <file size="1950">mv/mv.lua</file>
-      <file size="5325">mv/component/browser.lua</file>
+      <file size="5328">mv/component/browser.lua</file>
       <file size="3554">mv/component/scanner.lua</file>
       <file size="1599">mv/mv/dashboard.lua</file>
       <file size="1899">mv/mv/mv.lua</file>
