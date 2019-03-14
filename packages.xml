@@ -36,7 +36,7 @@
   </package>
   <package>
     <name>pv</name>
-    <version>4.1.0.1</version>
+    <version>4.1.0.2</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
@@ -53,7 +53,7 @@
       <file size="1968">pv/pv.lua</file>
       <file size="5282">pv/component/logger.lua</file>
       <file size="8888">pv/component/scanner.lua</file>
-      <file size="16123">pv/component/tracker.lua</file>
+      <file size="16119">pv/component/tracker.lua</file>
       <file size="1597">pv/pv/dashboard.lua</file>
       <file size="4715">pv/pv/pv.lua</file>
       <file size="2129">pv/pv/state.lua</file>
@@ -70,7 +70,7 @@
   </package>
   <package>
     <name>v</name>
-    <version>1.0.0.1</version>
+    <version>1.0.0.2</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -85,12 +85,13 @@
       <dependency>resources</dependency>
       <dependency>settings</dependency>
       <dependency>target</dependency>
+      <dependency>treasure</dependency>
       <dependency>util</dependency>
       <dependency>world</dependency>
     </dependencies>
     <files>
-      <file size="658">v/manifest.xml</file>
-      <file size="1085">v/v.lua</file>
+      <file size="697">v/manifest.xml</file>
+      <file size="1115">v/v.lua</file>
     </files>
   </package>
 </packages>

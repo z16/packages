@@ -1,6 +1,6 @@
 <package>
   <name>v</name>
-  <version>1.0.0.1</version>
+  <version>1.0.0.2</version>
   <type>addon</type>
   <dependencies>
     <dependency>account</dependency>
@@ -15,6 +15,7 @@
     <dependency>resources</dependency>
     <dependency>settings</dependency>
     <dependency>target</dependency>
+    <dependency>treasure</dependency>
     <dependency>util</dependency>
     <dependency>world</dependency>
   </dependencies>

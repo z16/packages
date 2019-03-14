@@ -9,6 +9,7 @@ linkshell = require('linkshell')
 memory = require('memory')
 player = require('player')
 target = require('target')
+treasure = require('treasure')
 world = require('world')
 
 local expressions = {
@@ -24,10 +25,10 @@ end
 local window_state = {
     title = 'Watched values',
     style = 'normal',
-    x = 1400,
-    y = 10,
-    height = 1000,
-    width = 300,
+    x = 1100,
+    y = 0,
+    height = 900,
+    width = 324,
 }
 
 ui.display(function()

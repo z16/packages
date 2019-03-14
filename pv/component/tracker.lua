@@ -233,7 +233,7 @@ do
 
                 value = string_format(format, string_byte(value, 1, max_length))
             elseif tag == 'entity' then
-                local entity = entities.get_by_id(value)
+                local entity = entities:by_id(value)
                 value = append(value, entity and entity.name)
             elseif tag == 'entity_index' then
                 local entity = entities[value]
