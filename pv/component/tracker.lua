@@ -128,12 +128,15 @@ end
 
 -- Packet handling
 
-packets:register(function(packet)
-    if not check_filters(tracker, data, packet) then
+packets:register(function(packet, info)
+    if not check_filters(tracker, data, packet, info) then
         return
     end
 
-    tracked:add(packet)
+    tracked:add({
+        packet = packet,
+        info = info,
+    })
 end)
 
 -- Command handling
@@ -421,14 +424,11 @@ do
 
         local subset = {}
 
-        local info = packet._info
-        packet._info = nil
         for key, value in pairs(packet) do
             if not arranged_labels:contains(key) then
                 subset[key] = value
             end
         end
-        packet._info = info
 
         return next(subset) and build_extra_lines(subset)
     end
@@ -442,10 +442,9 @@ do
 
     local packet_display_cache = setmetatable({}, noref)
 
-    display_packet = function(packet)
+    display_packet = function(packet, info)
         local cached = packet_display_cache[p]
         if not cached then
-            local info = packet._info
             local data = info.data
 
             local ftype = ftypes[info.direction][info.id]
@@ -541,18 +540,19 @@ do
             display_index = nil
         end
 
-        local packet = tracked[index]
-        if not packet then
+        local entry = tracked[index]
+        if not entry then
             return
         end
 
-        local info = packet._info
+        local packet = entry.packet
+        local info = entry.info
 
         location(10, 50)
         text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ']{Consolas}')
 
         location(10, 80)
-        text(display_packet(packet))
+        text(display_packet(packet, info))
     end
 
     tracker.button = function()

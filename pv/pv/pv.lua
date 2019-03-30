@@ -129,8 +129,7 @@ end
 
 local check_filters
 do
-    local check_filter = function(filter, packet, exclude)
-        local info = packet._info
+    local check_filter = function(filter, packet, info, exclude)
         if info.id ~= filter[1] then
             return false
         end
@@ -147,13 +146,13 @@ do
         return true
     end
 
-    check_filters = function(handler, data, packet)
+    check_filters = function(handler, data, packet, info)
         if not handler.running() then
             return false
         end
 
-        local dir = data[packet._info.direction]
-        return dir.exclude ~= dir.packets:any(check_filter, packet)
+        local dir = data[info.direction]
+        return dir.exclude ~= dir.packets:any(check_filter, packet, info)
     end
 end
 

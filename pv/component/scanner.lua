@@ -177,12 +177,11 @@ do
     local string_find = string.find
     local table_concat = table.concat
 
-    packets:register(function(packet)
-        if not check_filters(scanner, data, packet) then
+    packets:register(function(packet, info)
+        if not check_filters(scanner, data, packet, info) then
             return
         end
 
-        local info = packet._info
         local raw = info.data
         local positions = list()
         local start = 0

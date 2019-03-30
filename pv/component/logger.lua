@@ -111,12 +111,11 @@ do
     local os_date = os.date
     local os_time = os.time
 
-    packets:register(function(packet)
-        if not check_filters(logger, data, packet) then
+    packets:register(function(packet, info)
+        if not check_filters(logger, data, packet, info) then
             return
         end
 
-        local info = packet._info
         logged:push('[' ..
             os_date('%H:%M:%S', os_time()) .. '  ' ..
             info.direction .. '  ' ..
