@@ -12,7 +12,7 @@ local defaults = {
     },
 }
 
-local options = settings.load(defaults, 'mv.lua', true)
+local options = settings.load(defaults, 'mv', true)
 
 local components = list(require('mv.dashboard'))
 for _, component in ipairs(options.components) do

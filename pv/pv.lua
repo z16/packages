@@ -13,7 +13,7 @@ local defaults = {
     },
 }
 
-local options = settings.load(defaults, 'pv.lua', true)
+local options = settings.load(defaults, 'pv', true)
 
 local components = list(require('pv.dashboard'))
 for _, component in ipairs(options.components) do
