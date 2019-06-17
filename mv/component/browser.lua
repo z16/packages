@@ -1,7 +1,6 @@
 local account = require('account')
 local ffi = require('ffi')
 local list = require('list')
-local os = require('os')
 local string = require('string')
 local settings = require('settings')
 local table = require('table')
@@ -17,20 +16,19 @@ do
         visible = false,
         x = 370,
         y = 0,
-        width = 525,
+        width = 600,
         height = 340,
         address = '',
         active = false,
     }
 
-    display = settings.load(defaults, 'browser.lua', true)
+    display = settings.load(defaults, 'browser', true)
 end
 
 local data = {}
 
 local save = settings.save
 local init = state.init
-local watch = state.watch
 
 local hex_address = mv.hex.address
 local hex_raw = mv.hex.raw
@@ -98,14 +96,13 @@ do
     local edit = ui.edit
     local location = ui.location
     local text = ui.text
-    local window = ui.window
 
     browser.dashboard = function(pos)
         local active = browser.running()
 
         pos(10, 10)
         text('[Browsing]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
-        
+
         pos(20, 32)
         text('Address')
 
@@ -132,7 +129,9 @@ do
         local ffi_string = ffi.string
         local string_byte = string.byte
         local string_char = string.char
+        local string_format = string.format
         local table_concat = table.concat
+        local table_insert = table.insert
 
         local ptr_type = ffi.typeof('void*')
 
@@ -169,6 +168,22 @@ do
             lookup_byte[string_byte(char)] = '\\' .. char
         end
 
+        local offsets = {}
+        for i = 0, 4 do
+            local value = 0x10^i
+            local hex = string_format('0x%x', value)
+            table_insert(offsets, 1, {
+                name = 'mv_browse_back_' .. hex,
+                label = '- ' .. hex,
+                value = -value,
+            })
+            table_insert(offsets, {
+                name = 'mv_browse_forward_' .. hex,
+                label = '+ ' .. hex,
+                value = value,
+            })
+        end
+
         browser.window = function()
             local address = data.address
             if not address then
@@ -190,6 +205,14 @@ do
             end
 
             text('[' .. table_concat(lines, '\n') .. ']{Consolas 12px}')
+
+            location(525, 36)
+            for i = 1, #offsets do
+                local offset = offsets[i]
+                if button(offset.name, offset.label) then
+                    data.address = address + offset.value
+                end
+            end
         end
     end
 

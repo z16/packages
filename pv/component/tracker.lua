@@ -46,7 +46,7 @@ do
         active = false,
     }
 
-    display = settings.load(defaults, 'tracker.lua', true)
+    display = settings.load(defaults, 'tracker', true)
 end
 
 local data = {

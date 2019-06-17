@@ -33,7 +33,7 @@ do
         active = false,
     }
 
-    display = settings.load(defaults, 'scanner.lua', true)
+    display = settings.load(defaults, 'scanner', true)
 end
 
 local data = {

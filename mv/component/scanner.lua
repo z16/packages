@@ -1,7 +1,5 @@
 local clipboard = require('clipboard')
 local ffi = require('ffi')
-local list = require('list')
-local os = require('os')
 local memory_scanner = require('scanner')
 local settings = require('settings')
 local string = require('string')
@@ -16,17 +14,13 @@ do
         signature = '',
     }
 
-    display = settings.load(defaults, 'scanner.lua', true)
+    display = settings.load(defaults, 'scanner', true)
 end
 
 local data = {}
 
 local save = settings.save
 local init = state.init
-local watch = state.watch
-
-local hex_address = mv.hex.address
-local hex_zero = mv.hex.zero
 
 local modules = {'FFXiMain.dll', 'polcore.dll', 'polcoreEU.dll'}
 

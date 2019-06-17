@@ -13,7 +13,7 @@ local defaults = {
     height = 500,
 }
 
-local display = settings.load(defaults, 'dashboard.lua', true)
+local display = settings.load(defaults, 'dashboard', true)
 
 local save = settings.save
 local init = state.init

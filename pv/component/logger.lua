@@ -27,7 +27,7 @@ do
         active = false,
     }
 
-    display = settings.load(defaults, 'logger.lua', true)
+    display = settings.load(defaults, 'logger', true)
 end
 
 local data = {
