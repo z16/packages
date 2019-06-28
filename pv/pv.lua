@@ -68,7 +68,7 @@ ui.display(function()
 
     do
         local x = 10
-        local y = windower.settings.client_size.height - 18
+        local y = windower.settings.ui_size.height - 18
 
         for _, component in pairs(components) do
             x = x + render_button(component, x, y)
