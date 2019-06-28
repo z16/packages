@@ -27,18 +27,21 @@ do
         local lines = {}
         lines[1] = indent .. '{' .. (root and (' -- ' .. tostring(t)) or '')
         local keys = {}
+        local values = {}
         local key_count = 0
         local has_pairs = pcall(pairs, t)
         if has_pairs then
-            for key in pairs(t) do
+            for key, value in pairs(t) do
                 key_count = key_count + 1
                 keys[key_count] = key
+                values[key] = value
             end
         else
             for key = 0, -1, 1 do
                 if pcall(function(t, k) return t[k] end, t, key) then
                     key_count = key_count + 1
                     keys[key_count] = key
+                    values[key] = t[key]
                 end
             end
         end
@@ -52,7 +55,7 @@ do
         local line_count = 1
         for i = 1, key_count do
             local k = keys[i]
-            local v = t[k]
+            local v = values[k]
             local cycle = cache[v]
             local value = tostring(v)
             if string_find(value, '\x00') then
