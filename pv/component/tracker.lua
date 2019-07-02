@@ -62,12 +62,14 @@ local data = {
 
 local tracked = list()
 
+local pairs = pairs
+local tostring = tostring
+local type = type
 local process_pattern = pv.process_pattern
 local handle_base_command = pv.handle_base_command
 local check_filters = pv.check_filters
 local save = settings.save
 local init = state.init
-local watch = state.watch
 
 local display_incoming = display.incoming
 local display_outgoing = display.outgoing
@@ -100,7 +102,7 @@ end
 tracker.show = function(value)
     display.visible = value
 
-    save(display)
+    save('tracker')
 end
 
 tracker.start = function()
@@ -112,7 +114,7 @@ tracker.start = function()
     display.active = true
     display.visible = true
 
-    save(display)
+    save('tracker')
 end
 
 tracker.stop = function()
@@ -123,7 +125,7 @@ tracker.stop = function()
 
     display.active = false
 
-    save(display)
+    save('tracker')
 end
 
 -- Packet handling
@@ -158,8 +160,6 @@ data_outgoing.exclude = display_outgoing.exclude
 
 local colors = {}
 do
-    local math_sqrt = math.sqrt
-    local math_pi = math.pi
     local ui_color_rgb = ui.color.rgb
     local ui_color_tohex = ui.color.tohex
 
@@ -560,7 +560,7 @@ do
     end
 
     tracker.save = function()
-        save(display)
+        save('tracker')
     end
 end
 

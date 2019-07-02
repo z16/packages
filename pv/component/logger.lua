@@ -48,7 +48,6 @@ local handle_base_command = pv.handle_base_command
 local check_filters = pv.check_filters
 local save = settings.save
 local init = state.init
-local watch = state.watch
 
 local display_incoming = display.incoming
 local display_outgoing = display.outgoing
@@ -79,7 +78,7 @@ end
 logger.show = function(value)
     display.visible = value
 
-    save(display)
+    save('logger')
 end
 
 logger.start = function()
@@ -91,7 +90,7 @@ logger.start = function()
     display.active = true
     display.visible = true
 
-    save(display)
+    save('logger')
 end
 
 logger.stop = function()
@@ -102,7 +101,7 @@ logger.stop = function()
 
     display.active = false
 
-    save(display)
+    save('logger')
 end
 
 -- Packet handling
@@ -151,7 +150,6 @@ do
     local edit = ui.edit
     local location = ui.location
     local text = ui.text
-    local window = ui.window
 
     logger.dashboard = function(pos)
         local active = logger.running()
@@ -204,7 +202,7 @@ do
     end
 
     logger.save = function()
-        save(display)
+        save('logger')
     end
 end
 

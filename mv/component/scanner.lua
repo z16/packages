@@ -19,6 +19,7 @@ end
 
 local data = {}
 
+local tonumber = tonumber
 local save = settings.save
 local init = state.init
 
@@ -58,7 +59,7 @@ end
 scanner.show = function(value)
     display.visible = value
 
-    save(display)
+    save('scanner')
 end
 
 do
@@ -71,15 +72,16 @@ do
 
     scanner.start = function()
         local signature = string_gsub(display.signature, ' ', '')
-        for _, module in ipairs(modules) do
-            local ptr = scanner_scan(display.signature, module)
+        for i = 1, #modules do
+            local module = modules[i]
+            local ptr = scanner_scan(signature, module)
             if ptr ~= nil then
                 data.address = string_format('%.8X', tonumber(ffi_cast(int_ptr, ptr)))
                 break
             end
         end
 
-        save(display)
+        save('scanner')
     end
 end
 
@@ -100,10 +102,8 @@ mv.command:register('scan', scan_command, '<signature:text>')
 do
     local button = ui.button
     local edit = ui.edit
-    local location = ui.location
     local size = ui.size
     local text = ui.text
-    local window = ui.window
 
     scanner.dashboard = function(pos)
         pos(10, 50)
@@ -144,7 +144,7 @@ do
     end
 
     scanner.save = function()
-        save(display)
+        save('scanner')
     end
 end
 

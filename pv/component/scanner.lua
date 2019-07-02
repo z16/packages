@@ -50,12 +50,12 @@ local data = {
 
 local scanned = queue()
 
+local tonumber = tonumber
 local process_pattern = pv.process_pattern
 local handle_base_command = pv.handle_base_command
 local check_filters = pv.check_filters
 local save = settings.save
 local init = state.init
-local watch = state.watch
 
 local display_incoming = display.incoming
 local display_outgoing = display.outgoing
@@ -70,7 +70,6 @@ local hex_zero_3 = pv.hex.zero_3
 local parse_string_value
 do
     local math_abs = math.abs
-    local string_char = string.char
     local string_sub = string.sub
 
     parse_string_value = function(value, type, length)
@@ -140,7 +139,7 @@ end
 scanner.show = function(value)
     display.visible = value
 
-    save(display)
+    save('scanner')
 end
 
 scanner.start = function()
@@ -153,7 +152,7 @@ scanner.start = function()
     display.active = true
     display.visible = true
 
-    save(display)
+    save('scanner')
 end
 
 scanner.stop = function()
@@ -165,7 +164,7 @@ scanner.stop = function()
 
     display.active = false
 
-    save(display)
+    save('scanner')
 end
 
 -- Packet handling
@@ -320,7 +319,7 @@ do
     end
 
     scanner.save = function()
-        save(display)
+        save('scanner')
     end
 end
 

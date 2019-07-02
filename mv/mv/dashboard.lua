@@ -1,9 +1,7 @@
-local list = require('list')
 local settings = require('settings')
 local ui = require('ui')
 
 local state = require('mv.state')
-local mv = require('mv.mv')
 
 local defaults = {
     visible = false,
@@ -15,9 +13,9 @@ local defaults = {
 
 local display = settings.load(defaults, 'dashboard', true)
 
+local pairs = pairs
 local save = settings.save
 local init = state.init
-local watch = state.watch
 
 -- Public operations
 
@@ -32,11 +30,11 @@ end
 dashboard.show = function(value)
     display.visible = value
 
-    save(display)
+    save('dashboard')
 end
 
 dashboard.save = function()
-    save(display)
+    save('dashboard')
 end
 
 local components
@@ -47,9 +45,7 @@ end
 -- UI
 
 do
-    local button = ui.button
     local location = ui.location
-    local window = ui.window
 
     dashboard.state = init(display, {
         title = 'Memory Viewer',
@@ -75,7 +71,7 @@ do
     end
 
     dashboard.save = function()
-        save(display)
+        save('dashboard')
     end
 end
 

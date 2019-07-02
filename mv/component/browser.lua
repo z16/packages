@@ -27,6 +27,7 @@ end
 
 local data = {}
 
+local tonumber = tonumber
 local save = settings.save
 local init = state.init
 
@@ -57,7 +58,7 @@ end
 browser.show = function(value)
     display.visible = value
 
-    save(display)
+    save('browser')
 end
 
 browser.start = function()
@@ -66,7 +67,7 @@ browser.start = function()
     display.active = true
     display.visible = true
 
-    save(display)
+    save('browser')
 end
 
 browser.stop = function()
@@ -74,7 +75,7 @@ browser.stop = function()
 
     display.active = false
 
-    save(display)
+    save('browser')
 end
 
 -- Command handling
@@ -221,7 +222,7 @@ do
     end
 
     browser.save = function()
-        save(display)
+        save('browser')
     end
 end
 
