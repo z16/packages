@@ -61,11 +61,14 @@
   </package>
   <package>
     <name>util</name>
-    <version>1.0.2.0</version>
+    <version>1.1.0.0</version>
     <type>library</type>
+    <dependencies>
+      <dependency>struct</dependency>
+    </dependencies>
     <files>
-      <file size="98">util/manifest.xml</file>
-      <file size="8979">util/util.lua</file>
+      <file size="172">util/manifest.xml</file>
+      <file size="10492">util/util.lua</file>
     </files>
   </package>
   <package>

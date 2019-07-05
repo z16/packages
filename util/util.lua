@@ -1,6 +1,7 @@
 local bit = require('bit')
 local ffi = require('ffi')
 local string = require('string')
+local struct = require('struct')
 local table = require('table')
 
 local util = {}
@@ -257,6 +258,63 @@ do
         end
 
         return table.concat(lines, '\n')
+    end
+end
+
+do
+    local string_gmatch = string.gmatch
+    local string_gsub = string.gsub
+    local string_match = string.match
+    local string_rep = string.rep
+    local string_sub = string.sub
+    local table_concat = table.concat
+
+    local indents = {}
+    for i = 0, 20 do
+        indents[i] = string_rep('    ', i)
+    end
+
+    util.vdef = function(ftype)
+        local def = ftype.cdef
+
+        local changed = true
+        while changed do
+            changed = false
+            for key, value in pairs(struct.typedefs) do
+                if string_match(def, key) then
+                    def = string_gsub(def, key, value)
+                    changed = true
+                    break
+                end
+            end
+        end
+
+        def = string_gsub(def, '{', ' {\n')
+        def = string_gsub(def, ';', ';\n') .. '\n'
+
+        local lines = {}
+        local count = 0
+        for line in string_gmatch(def, '(.-)\n') do
+            count = count + 1
+            lines[count] = line
+        end
+
+        local indent = 0
+        for i = 1, count do
+            local line = lines[i]
+
+            if string_sub(line, 1, 1) == '}' then
+                indent = indent - 1
+            end
+
+            lines[i] = indents[indent] .. line
+
+            if string_sub(line, #line, #line) == '{' then
+                indent = indent + 1
+            end
+        end
+
+        return table_concat(lines, '\n')
     end
 end
 
