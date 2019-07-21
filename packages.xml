@@ -36,7 +36,7 @@
   </package>
   <package>
     <name>pv</name>
-    <version>4.1.2.1</version>
+    <version>4.1.2.2</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
@@ -47,28 +47,29 @@
       <dependency>queue</dependency>
       <dependency>resources</dependency>
       <dependency>settings</dependency>
+      <dependency>struct</dependency>
     </dependencies>
     <files>
-      <file size="437">pv/manifest.xml</file>
+      <file size="474">pv/manifest.xml</file>
       <file size="1960">pv/pv.lua</file>
-      <file size="5202">pv/component/logger.lua</file>
-      <file size="8832">pv/component/scanner.lua</file>
-      <file size="16077">pv/component/tracker.lua</file>
+      <file size="5226">pv/component/logger.lua</file>
+      <file size="8887">pv/component/scanner.lua</file>
+      <file size="16139">pv/component/tracker.lua</file>
       <file size="1480">pv/pv/dashboard.lua</file>
-      <file size="4690">pv/pv/pv.lua</file>
+      <file size="4654">pv/pv/pv.lua</file>
       <file size="2129">pv/pv/state.lua</file>
     </files>
   </package>
   <package>
     <name>util</name>
-    <version>1.1.0.0</version>
+    <version>1.2.0.0</version>
     <type>library</type>
     <dependencies>
       <dependency>struct</dependency>
     </dependencies>
     <files>
       <file size="172">util/manifest.xml</file>
-      <file size="10492">util/util.lua</file>
+      <file size="10553">util/util.lua</file>
     </files>
   </package>
   <package>
