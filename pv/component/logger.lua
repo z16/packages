@@ -119,7 +119,7 @@ do
             os_date('%H:%M:%S', os_time()) .. '  ' ..
             info.direction .. '  ' ..
             '0x' .. hex_zero_3[info.id] .. '   ' ..
-            tohex(info.data) ..
+            tohex(info.original, info.original_size) ..
         ']{Consolas}')
         if #logged > 20 then
             logged:pop()

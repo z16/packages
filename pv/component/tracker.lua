@@ -9,6 +9,7 @@ local set = require('set')
 local settings = require('settings')
 local shared = require('shared')
 local string = require('string')
+local struct = require('struct')
 local table = require('table')
 local ui = require('ui')
 
@@ -16,16 +17,7 @@ local state = require('pv.state')
 local pv = require('pv.pv')
 
 local client = shared.get('packet_service', 'types')
-
-local ftypes = {
-    incoming = {},
-    outgoing = {},
-}
-
-for i = 0, 0x1FF do
-    ftypes.incoming[i] = client:read('incoming', i)
-    ftypes.outgoing[i] = client:read('outgoing', i)
-end
+local service = shared.get('packet_service', 'packets')
 
 local display
 do
@@ -130,16 +122,24 @@ end
 
 -- Packet handling
 
-packets:register(function(packet, info)
-    if not check_filters(tracker, data, packet, info) then
-        return
-    end
+do
+    local empty_ftype = struct.struct({})
+    local types = packets.types
 
-    tracked:add({
-        packet = packet,
-        info = info,
-    })
-end)
+    packets:register(function(packet, info)
+        if not check_filters(tracker, data, packet, info) then
+            return
+        end
+
+        local ftype = types[info.path]
+
+        tracked:add({
+            packet = struct.copy(packet, ftype),
+            info = struct.copy(info, types.current),
+            ftype = ftype,
+        })
+    end)
+end
 
 -- Command handling
 
@@ -216,40 +216,42 @@ do
         return tostring(value) .. ' (' .. tostring(lookup or '?') .. ')'
     end
 
-    build_packet_fields = function(packet, ftype, color_table)
+    build_packet_fields = function(packet, ftype)
         local arranged = ftype.arranged
         local fields = ftype.fields
         local lines = {}
         local lines_count = 0
         for i = 1, #arranged do
             local field = arranged[i]
-            local label = field.label
-            lines_count = lines_count + 1
+            if not field.internal then
+                local label = field.label
+                lines_count = lines_count + 1
 
-            local value = packet[field.label]
+                local value = packet[field.label]
 
-            local tag = field.type.tag
-            if tag == 'data' then
-                local data_length = #value
-                local max_length = data_lengths[#label]
-                local format = data_length > max_length and data_formats[max_length] .. '…' or data_formats[data_length]
+                local tag = field.type.tag
+                if tag == 'data' then
+                    local data_length = #value
+                    local max_length = data_lengths[#label]
+                    local format = data_length > max_length and data_formats[max_length] .. '…' or data_formats[data_length]
 
-                value = string_format(format, string_byte(value, 1, max_length))
-            elseif tag == 'entity' then
-                local entity = entities:by_id(value)
-                value = append(value, entity and entity.name)
-            elseif tag == 'entity_index' then
-                local entity = entities[value]
-                value = append(value, entity and entity.name)
-            elseif tag then
-                local resource_table = resources[tag]
-                if resource_table then
-                    local resource = resource_table[value]
-                    value = append(value, resource and resource.name)
+                    value = string_format(format, string_byte(value, 1, max_length))
+                elseif tag == 'entity' then
+                    local entity = entities:by_id(value)
+                    value = append(value, entity and entity.name)
+                elseif tag == 'entity_index' then
+                    local entity = entities[value]
+                    value = append(value, entity and entity.name)
+                elseif tag then
+                    local resource_table = resources[tag]
+                    if resource_table then
+                        local resource = resource_table[value]
+                        value = append(value, resource and resource.name)
+                    end
                 end
-            end
 
-            lines[lines_count] = hex_space[fields[label].position] .. ' [' .. label .. ': ' .. tostring(value) .. ']{' .. colors[i] .. '}'
+                lines[lines_count] = hex_space[fields[label].position] .. ' [' .. label .. ': ' .. tostring(value) .. ']{' .. colors[i] .. '}'
+            end
         end
 
         return table_concat(lines, '\n')
@@ -281,10 +283,9 @@ do
         lookup_byte[string_byte(char)] = '\\' .. char
     end
 
-    build_packet_table = function(data, ftype, color_table)
+    build_packet_table = function(data, end_data, color_table)
         local address = 0
         local base_offset = 0
-        local end_data = #data
         local end_char = band(end_data + 0xF, bnot(0xF))
 
         local lookup_hex = {}
@@ -353,7 +354,7 @@ do
                 to = position + math_floor((field.offset + bits) / 8)
             elseif size == '*' then
                 from = position
-                to = #info.data - 1
+                to = info.original_size - 1
             else
                 from = position
                 to = position + size - 1
@@ -380,7 +381,6 @@ do
             color_table_cache[ftype] = color_table
         end
 
-        --TODO ftype.var_size
         return color_table
     end
 end
@@ -419,7 +419,10 @@ do
         local arranged_count = #arranged
         local arranged_labels = set()
         for i = 1, arranged_count do
-            arranged_labels:add(arranged[i].label)
+            local field = arranged[i]
+            if not field.internal then
+                arranged_labels:add(field.label)
+            end
         end
 
         local subset = {}
@@ -436,31 +439,21 @@ end
 
 local display_packet
 do
-    local noref = {
+    local packet_display_cache = setmetatable({}, {
         __mode = 'k',
-    }
+    })
 
-    local packet_display_cache = setmetatable({}, noref)
-
-    display_packet = function(packet, info)
-        local cached = packet_display_cache[p]
+    display_packet = function(packet, info, ftype)
+        local cached = packet_display_cache[packet]
         if not cached then
-            local data = info.data
-
-            local ftype = ftypes[info.direction][info.id]
-            local types = ftype and ftype.types
-            if types then
-                ftype = types[packet[ftype.key]]
-            end
-
             local color_table = build_color_table(info, ftype)
 
-            local table = build_packet_table(data, ftype, color_table)
-            local fields = ftype and build_packet_fields(packet, ftype, color_table)
+            local table_string = build_packet_table(info.original, info.original_size, color_table)
+            local fields = ftype and build_packet_fields(packet, ftype)
 
             local extras = ftype and build_packet_extras(packet, ftype)
 
-            cached = '[' .. table .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
+            cached = '[' .. table_string .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
             packet_display_cache[packet] = cached
         end
 
@@ -474,7 +467,6 @@ do
     local edit = ui.edit
     local location = ui.location
     local text = ui.text
-    local window = ui.window
     local os_date = os.date
 
     tracker.dashboard = function(pos)
@@ -552,7 +544,7 @@ do
         text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ']{Consolas}')
 
         location(10, 80)
-        text(display_packet(packet, info))
+        text(display_packet(packet, info, entry.ftype))
     end
 
     tracker.button = function()

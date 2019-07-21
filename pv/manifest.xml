@@ -1,6 +1,6 @@
 <package>
   <name>pv</name>
-  <version>4.1.2.1</version>
+  <version>4.1.2.2</version>
   <type>addon</type>
   <dependencies>
     <dependency>entities</dependency>
@@ -11,5 +11,6 @@
     <dependency>queue</dependency>
     <dependency>resources</dependency>
     <dependency>settings</dependency>
+    <dependency>struct</dependency>
   </dependencies>
 </package>

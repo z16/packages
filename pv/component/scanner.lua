@@ -69,7 +69,7 @@ local hex_zero_3 = pv.hex.zero_3
 
 local parse_string_value
 do
-    local math_abs = math.abs
+    local string_char = string.char
     local string_sub = string.sub
 
     parse_string_value = function(value, type, length)
@@ -169,11 +169,11 @@ end
 
 -- Packet handling
 
-local scan_packet
 do
     local os_date = os.date
     local os_time = os.time
     local string_find = string.find
+    local string_sub = string.sub
     local table_concat = table.concat
 
     packets:register(function(packet, info)
@@ -181,7 +181,7 @@ do
             return
         end
 
-        local raw = info.data
+        local raw = string_sub(info.original, 1, info.original_size)
         local positions = list()
         local start = 0
         repeat
@@ -213,9 +213,9 @@ do
     end
 
     local scan_for_command = function(type, value)
-        local display = scanner.display
-        display.value = value
-        display.type = type
+        local scanner_display = scanner.display
+        scanner_display.value = value
+        scanner_display.type = type
 
         if scanner.valid() then
             scanner.start()
@@ -244,7 +244,6 @@ do
     local radio = ui.radio
     local size = ui.size
     local text = ui.text
-    local window = ui.window
 
     scanner.dashboard = function(pos)
         local active = scanner.running()

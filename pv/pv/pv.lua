@@ -29,15 +29,14 @@ do
     local ffi_string = ffi.string
     local string_byte = string.byte
     local string_format = string.format
-    local table_concat = table.concat
 
     local buffer = ffi.new('char[0x400]')
 
-    hex = function(v)
+    hex = function(v, length)
         if type(v) == 'number' then
             return string_format('%X', v)
         elseif type(v) == 'string' then
-            local length = #v
+            length = length or #v
             for i = 0, length - 1 do
                 local str = hex_zero[string_byte(v, i + 1)]
                 buffer[3 * i] = string_byte(str, 1)
@@ -129,7 +128,7 @@ end
 
 local check_filters
 do
-    local check_filter = function(filter, packet, info, exclude)
+    local check_filter = function(filter, packet, info)
         if info.id ~= filter[1] then
             return false
         end
