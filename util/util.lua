@@ -1,4 +1,5 @@
 local bit = require('bit')
+local debug = require('debug')
 local ffi = require('ffi')
 local string = require('string')
 local struct = require('struct')
@@ -277,15 +278,10 @@ do
     util.vdef = function(ftype)
         local def = ftype.cdef
 
-        local changed = true
-        while changed do
-            changed = false
+        local changed = 1
+        while changed > 0 do
             for key, value in pairs(struct.typedefs) do
-                if string_match(def, key) then
-                    def = string_gsub(def, key, value)
-                    changed = true
-                    break
-                end
+                def, changed = string_gsub(def, key .. ' ', value .. ' ')
             end
         end
 
@@ -316,6 +312,14 @@ do
 
         return table_concat(lines, '\n')
     end
+end
+
+util.line = function(frame)
+    return debug.getinfo((frame or 1) + 1).currentline
+end
+
+util.lprint = function(frame)
+    print(util.line((frame or 1) + 1))
 end
 
 return util
