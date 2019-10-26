@@ -14,7 +14,7 @@
   </package>
   <package>
     <name>mv</name>
-    <version>1.0.2.1</version>
+    <version>1.0.2.2</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -26,17 +26,17 @@
     </dependencies>
     <files>
       <file size="356">mv/manifest.xml</file>
-      <file size="1942">mv/mv.lua</file>
-      <file size="6133">mv/component/browser.lua</file>
-      <file size="3386">mv/component/scanner.lua</file>
-      <file size="1482">mv/mv/dashboard.lua</file>
-      <file size="1899">mv/mv/mv.lua</file>
+      <file size="1952">mv/mv.lua</file>
+      <file size="6138">mv/component/browser.lua</file>
+      <file size="3396">mv/component/scanner.lua</file>
+      <file size="1487">mv/mv/dashboard.lua</file>
+      <file size="1869">mv/mv/mv.lua</file>
       <file size="2129">mv/mv/state.lua</file>
     </files>
   </package>
   <package>
     <name>pv</name>
-    <version>4.1.2.2</version>
+    <version>4.1.2.3</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
@@ -51,12 +51,12 @@
     </dependencies>
     <files>
       <file size="474">pv/manifest.xml</file>
-      <file size="1960">pv/pv.lua</file>
-      <file size="5226">pv/component/logger.lua</file>
-      <file size="8887">pv/component/scanner.lua</file>
-      <file size="16139">pv/component/tracker.lua</file>
-      <file size="1480">pv/pv/dashboard.lua</file>
-      <file size="4654">pv/pv/pv.lua</file>
+      <file size="1970">pv/pv.lua</file>
+      <file size="5231">pv/component/logger.lua</file>
+      <file size="8862">pv/component/scanner.lua</file>
+      <file size="15974">pv/component/tracker.lua</file>
+      <file size="1485">pv/pv/dashboard.lua</file>
+      <file size="4659">pv/pv/pv.lua</file>
       <file size="2129">pv/pv/state.lua</file>
     </files>
   </package>
@@ -74,28 +74,15 @@
   </package>
   <package>
     <name>v</name>
-    <version>1.0.0.2</version>
+    <version>2.0.0.0</version>
     <type>addon</type>
     <dependencies>
-      <dependency>account</dependency>
-      <dependency>entities</dependency>
-      <dependency>equipment</dependency>
-      <dependency>items</dependency>
-      <dependency>linkshell</dependency>
-      <dependency>memory</dependency>
-      <dependency>packets</dependency>
-      <dependency>party</dependency>
-      <dependency>player</dependency>
-      <dependency>resources</dependency>
-      <dependency>settings</dependency>
-      <dependency>target</dependency>
-      <dependency>treasure</dependency>
+      <dependency>list</dependency>
       <dependency>util</dependency>
-      <dependency>world</dependency>
     </dependencies>
     <files>
-      <file size="697">v/manifest.xml</file>
-      <file size="1115">v/v.lua</file>
+      <file size="200">v/manifest.xml</file>
+      <file size="1663">v/v.lua</file>
     </files>
   </package>
 </packages>

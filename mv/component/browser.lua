@@ -4,7 +4,7 @@ local list = require('list')
 local string = require('string')
 local settings = require('settings')
 local table = require('table')
-local ui = require('ui')
+local ui = require('core.ui')
 local world = require('world')
 
 local state = require('mv.state')

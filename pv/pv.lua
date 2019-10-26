@@ -1,7 +1,7 @@
 local list = require('list')
 local settings = require('settings')
-local ui = require('ui')
-local windower = require('windower')
+local ui = require('core.ui')
+local windower = require('core.windower')
 
 local state = require('pv.state')
 

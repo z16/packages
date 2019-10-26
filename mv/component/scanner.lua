@@ -1,9 +1,9 @@
 local clipboard = require('clipboard')
 local ffi = require('ffi')
-local memory_scanner = require('scanner')
+local memory_scanner = require('core.scanner')
 local settings = require('settings')
 local string = require('string')
-local ui = require('ui')
+local ui = require('core.ui')
 
 local state = require('mv.state')
 local mv = require('mv.mv')

@@ -1,6 +1,5 @@
 local command = require('command')
 local ffi = require('ffi')
-local list = require('list')
 local string = require('string')
 local table = require('table')
 

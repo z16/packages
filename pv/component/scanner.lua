@@ -1,12 +1,11 @@
 local list = require('list')
-local math = require('math')
 local os = require('os')
 local packets = require('packets')
 local queue = require('queue')
 local settings = require('settings')
 local string = require('string')
 local table = require('table')
-local ui = require('ui')
+local ui = require('core.ui')
 
 local state = require('pv.state')
 local pv = require('pv.pv')

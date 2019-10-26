@@ -7,17 +7,13 @@ local packets = require('packets')
 local resources = require('resources')
 local set = require('set')
 local settings = require('settings')
-local shared = require('shared')
 local string = require('string')
 local struct = require('struct')
 local table = require('table')
-local ui = require('ui')
+local ui = require('core.ui')
 
 local state = require('pv.state')
 local pv = require('pv.pv')
-
-local client = shared.get('packet_service', 'types')
-local service = shared.get('packet_service', 'packets')
 
 local display
 do
@@ -342,11 +338,10 @@ do
         for i = 1, arranged_count do
             local field = arranged[i]
             local position = field.position
-            local type = field.type
+            local inner_ftype = field.type
 
-            local size = type.size
-            local var_size = type.var_size
-            local bits = type.bits
+            local size = inner_ftype.size
+            local bits = inner_ftype.bits
 
             local from, to
             if bits then

@@ -1,5 +1,5 @@
 local settings = require('settings')
-local ui = require('ui')
+local ui = require('core.ui')
 
 local state = require('mv.state')
 
