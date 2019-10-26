@@ -1,22 +1,9 @@
 <package>
   <name>v</name>
-  <version>1.0.0.2</version>
+  <version>2.0.0.0</version>
   <type>addon</type>
   <dependencies>
-    <dependency>account</dependency>
-    <dependency>entities</dependency>
-    <dependency>equipment</dependency>
-    <dependency>items</dependency>
-    <dependency>linkshell</dependency>
-    <dependency>memory</dependency>
-    <dependency>packets</dependency>
-    <dependency>party</dependency>
-    <dependency>player</dependency>
-    <dependency>resources</dependency>
-    <dependency>settings</dependency>
-    <dependency>target</dependency>
-    <dependency>treasure</dependency>
+    <dependency>list</dependency>
     <dependency>util</dependency>
-    <dependency>world</dependency>
   </dependencies>
 </package>
