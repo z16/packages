@@ -1,7 +1,6 @@
-local command = require('command')
+local command = require('core.command')
 local ffi = require('ffi')
 local string = require('string')
-local table = require('table')
 
 -- Precomputing hex display arrays
 
@@ -23,7 +22,6 @@ do
     local ffi_string = ffi.string
     local string_byte = string.byte
     local string_format = string.format
-    local table_concat = table.concat
 
     local buffer = ffi.new('char[0x400]')
 
