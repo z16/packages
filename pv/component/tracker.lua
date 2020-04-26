@@ -536,7 +536,7 @@ do
         local info = entry.info
 
         location(10, 50)
-        text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ']{Consolas}')
+        text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ' | ' .. info.sequence_counter .. ']{Consolas}')
 
         location(10, 80)
         text(display_packet(packet, info, entry.ftype))
