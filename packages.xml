@@ -1,6 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <packages>
   <package>
+    <name>cw</name>
+    <version>1.0.0.0</version>
+    <type>addon</type>
+    <files>
+      <file size="608">cw/cw.lua</file>
+      <file size="94">cw/manifest.xml</file>
+    </files>
+  </package>
+  <package>
     <name>ja0</name>
     <version>1.0.0.0</version>
     <type>addon</type>
@@ -14,7 +23,7 @@
   </package>
   <package>
     <name>mv</name>
-    <version>1.0.2.2</version>
+    <version>1.0.2.3</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -30,13 +39,13 @@
       <file size="6138">mv/component/browser.lua</file>
       <file size="3396">mv/component/scanner.lua</file>
       <file size="1487">mv/mv/dashboard.lua</file>
-      <file size="1869">mv/mv/mv.lua</file>
+      <file size="1803">mv/mv/mv.lua</file>
       <file size="2129">mv/mv/state.lua</file>
     </files>
   </package>
   <package>
     <name>pv</name>
-    <version>4.1.2.3</version>
+    <version>4.1.3.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
@@ -54,7 +63,7 @@
       <file size="1970">pv/pv.lua</file>
       <file size="5231">pv/component/logger.lua</file>
       <file size="8862">pv/component/scanner.lua</file>
-      <file size="15974">pv/component/tracker.lua</file>
+      <file size="16008">pv/component/tracker.lua</file>
       <file size="1485">pv/pv/dashboard.lua</file>
       <file size="4659">pv/pv/pv.lua</file>
       <file size="2129">pv/pv/state.lua</file>
