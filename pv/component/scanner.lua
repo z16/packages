@@ -71,14 +71,14 @@ do
     local string_char = string.char
     local string_sub = string.sub
 
-    parse_string_value = function(value, type, length)
+    parse_string_value = function(value, type)
         if type == 'int' then
             local num = tonumber(value)
             if not num then
                 return ''
-            elseif num < 0x100 and (length == nil or length <= 1) then
+            elseif num < 0x100 then
                 return string_char(num % 0x100)
-            elseif num < 0x10000 and (length == nil or length <= 2) then
+            elseif num < 0x10000 then
                 return string_char(num % 0x100, num / 0x100 % 0x100)
             else
                 return string_char(num % 0x100, num / 0x100 % 0x100, num / 0x10000 % 0x10, num / 0x1000000 % 0x1000)
@@ -95,7 +95,7 @@ do
 
             while index <= length do
                 local char = string_sub(value, index, index)
-                if char ~= ' ' and chat ~= '-' then
+                if char ~= ' ' and char ~= '-' then
                     local num = tonumber(char, 0x10)
                     if not num then
                         return ''
