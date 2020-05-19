@@ -65,7 +65,7 @@ ui.display(function()
                 res = 'nil'
             end
 
-            ui.text('[' .. tostring(index) .. '] ' .. expression.label .. ':\n    ' .. res)
+            ui.text('[' .. tostring(index) .. '] ' .. expression.label .. ':\n    ' .. tostring(res))
         end
     end)
 end)
