@@ -1,6 +1,6 @@
 local list = require('list')
 local os = require('os')
-local packets = require('packets')
+local packet = require('packet')
 local queue = require('queue')
 local settings = require('settings')
 local ui = require('core.ui')
@@ -110,7 +110,7 @@ do
     local os_date = os.date
     local os_time = os.time
 
-    packets:register(function(packet, info)
+    packet:register(function(packet, info)
         if not check_filters(logger, data, packet, info) then
             return
         end

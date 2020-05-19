@@ -3,7 +3,7 @@ local entities = require('entities')
 local list = require('list')
 local math = require('math')
 local os = require('os')
-local packets = require('packets')
+local packet = require('packet')
 local resources = require('resources')
 local set = require('set')
 local settings = require('settings')
@@ -119,10 +119,9 @@ end
 -- Packet handling
 
 do
-    local empty_ftype = struct.struct({})
-    local types = packets.types
+    local types = packet.types
 
-    packets:register(function(packet, info)
+    packet:register(function(packet, info)
         if not check_filters(tracker, data, packet, info) then
             return
         end

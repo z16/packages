@@ -1,6 +1,6 @@
 local list = require('list')
 local os = require('os')
-local packets = require('packets')
+local packet = require('packet')
 local queue = require('queue')
 local settings = require('settings')
 local string = require('string')
@@ -175,7 +175,7 @@ do
     local string_sub = string.sub
     local table_concat = table.concat
 
-    packets:register(function(packet, info)
+    packet:register(function(packet, info)
         if not check_filters(scanner, data, packet, info) then
             return
         end
