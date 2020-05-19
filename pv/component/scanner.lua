@@ -195,7 +195,7 @@ do
                 os_date('%H:%M:%S', os_time()) .. '  ' ..
                 info.direction .. '  ' ..
                 '0x' .. hex_zero_3[info.id] .. '   ' ..
-                'Found at positions: ' .. table_concat(positions:select(function(pos) return '0x' .. hex_zero[pos - 1] end):totable(), ', ') ..
+                'Found at positions: ' .. table_concat(positions:select(function(pos) return '0x' .. hex_zero[pos - 1] end):to_table(), ', ') ..
             ']{Consolas}')
             if #scanned > 20 then
                 scanned:pop()
