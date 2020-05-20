@@ -110,8 +110,8 @@ do
     local os_date = os.date
     local os_time = os.time
 
-    packet:register(function(packet, info)
-        if not check_filters(logger, data, packet, info) then
+    packet:register(function(p, info)
+        if not check_filters(logger, data, p, info) then
             return
         end
 

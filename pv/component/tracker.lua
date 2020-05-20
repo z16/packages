@@ -121,15 +121,15 @@ end
 do
     local types = packet.types
 
-    packet:register(function(packet, info)
-        if not check_filters(tracker, data, packet, info) then
+    packet:register(function(p, info)
+        if not check_filters(tracker, data, p, info) then
             return
         end
 
         local ftype = types[info.path]
 
         tracked:add({
-            packet = struct.copy(packet, ftype),
+            packet = struct.copy(p, ftype),
             info = struct.copy(info, types.current),
             ftype = ftype,
         })
@@ -211,7 +211,7 @@ do
         return tostring(value) .. ' (' .. tostring(lookup or '?') .. ')'
     end
 
-    build_packet_fields = function(packet, ftype)
+    build_packet_fields = function(p, ftype)
         local arranged = ftype.arranged
         local fields = ftype.fields
         local lines = {}
@@ -222,7 +222,7 @@ do
                 local label = field.label
                 lines_count = lines_count + 1
 
-                local value = packet[field.label]
+                local value = p[field.label]
 
                 local tag = field.type.tag
                 if tag == 'data' then
@@ -408,7 +408,7 @@ do
         return table_concat(lines, '\n')
     end
 
-    build_packet_extras = function(packet, ftype)
+    build_packet_extras = function(p, ftype)
         local arranged = ftype.arranged
         local arranged_count = #arranged
         local arranged_labels = set()
@@ -421,7 +421,7 @@ do
 
         local subset = {}
 
-        for key, value in pairs(packet) do
+        for key, value in pairs(p) do
             if not arranged_labels:contains(key) then
                 subset[key] = value
             end
@@ -437,18 +437,18 @@ do
         __mode = 'k',
     })
 
-    display_packet = function(packet, info, ftype)
-        local cached = packet_display_cache[packet]
+    display_packet = function(p, info, ftype)
+        local cached = packet_display_cache[p]
         if not cached then
             local color_table = build_color_table(info, ftype)
 
             local table_string = build_packet_table(info.original, info.original_size, color_table)
-            local fields = ftype and build_packet_fields(packet, ftype)
+            local fields = ftype and build_packet_fields(p, ftype)
 
-            local extras = ftype and build_packet_extras(packet, ftype)
+            local extras = ftype and build_packet_extras(p, ftype)
 
             cached = '[' .. table_string .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
-            packet_display_cache[packet] = cached
+            packet_display_cache[p] = cached
         end
 
         return cached
@@ -526,19 +526,19 @@ do
             display_index = nil
         end
 
-        local entry = tracked[index]
-        if not entry then
+        if index == 0 or index > tracked.length then
             return
         end
 
-        local packet = entry.packet
+        local entry = tracked[index]
+
         local info = entry.info
 
         location(10, 50)
         text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ' | ' .. info.sequence_counter .. ']{Consolas}')
 
         location(10, 80)
-        text(display_packet(packet, info, entry.ftype))
+        text(display_packet(entry.packet, info, entry.ftype))
     end
 
     tracker.button = function()

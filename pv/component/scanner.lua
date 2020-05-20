@@ -175,8 +175,8 @@ do
     local string_sub = string.sub
     local table_concat = table.concat
 
-    packet:register(function(packet, info)
-        if not check_filters(scanner, data, packet, info) then
+    packet:register(function(p, info)
+        if not check_filters(scanner, data, p, info) then
             return
         end
 

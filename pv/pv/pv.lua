@@ -128,14 +128,14 @@ end
 
 local check_filters
 do
-    local check_filter = function(filter, packet, info)
+    local check_filter = function(filter, p, info)
         if info.id ~= filter[1] then
             return false
         end
 
         for key, value in pairs(filter) do
             if key ~= 1 then
-                local packet_value = packet[key]
+                local packet_value = p[key]
                 if packet_value ~= value then
                     return false
                 end
@@ -145,13 +145,15 @@ do
         return true
     end
 
-    check_filters = function(handler, data, packet, info)
+    check_filters = function(handler, data, p, info)
         if not handler.running() then
             return false
         end
 
         local dir = data[info.direction]
-        return dir.exclude ~= dir.packets:any(check_filter, packet, info)
+        return dir.exclude ~= dir.packets:any(function(filter)
+            return check_filter(filter, p, info)
+        end)
     end
 end
 
