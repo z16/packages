@@ -36,15 +36,47 @@ local hex_raw = mv.hex.raw
 local hex_space = mv.hex.space
 local hex_zero = mv.hex.zero
 
+-- Adjusting _G to allow arbitrary module loading
+
+setmetatable(_G, {
+    __index = function(t, k)
+        local ok, res = pcall(require, k)
+        if not ok then
+            return nil
+        end
+
+        rawset(t, k, res)
+        return res
+    end,
+})
+
 -- Public operations
 
 local browser = {}
 
 browser.name = 'browse'
 
-browser.valid = function()
-    local address = tonumber(display.address, 16)
-    return address ~= nil and address > 0 and address < 0xFFFFFFFF
+local getters = {}
+
+browser.get_value = function()
+    local value = display.address
+    local address = tonumber(value, 16)
+    if address ~= nil and address > 0 and address <= 0xFFFFFFFF then
+        return address
+    end
+
+    local getter = getters[value]
+    if not getter then
+        getter = loadstring('return ' .. value)
+        getters[value] = getter
+    end
+
+    local ok, result = pcall(getter)
+    if ok and type(result) == 'cdata' then
+        return value
+    end
+
+    return nil
 end
 
 browser.running = function()
@@ -61,8 +93,8 @@ browser.show = function(value)
     save('browser')
 end
 
-browser.start = function()
-    data.address = tonumber(display.address, 16)
+browser.start = function(value)
+    data.address = value
 
     display.active = true
     display.visible = true
@@ -112,8 +144,9 @@ do
         display.address = edit('mv_browse_address', display.address)
 
         pos(20, 30)
-        if button('mv_browse_start', active and 'Restart browser' or 'Start browser', { enabled = browser.valid() }) then
-            browser.start()
+        local value = browser.get_value()
+        if button('mv_browse_start', active and 'Restart browser' or 'Start browser', { enabled = value ~= nil }) then
+            browser.start(value)
         end
         pos(120, 0)
         if button('mv_browse_stop', 'Stop browser', { enabled = active }) then
@@ -189,6 +222,16 @@ do
             local address = data.address
             if not address then
                 return
+            end
+
+            if type(address) == 'string' then
+                local ok, result = pcall(getters[address])
+                if not ok or result == nil then
+                    text('Invalid expression: ' .. address .. ' (' .. tostring(result) .. ')')
+                    return
+                end
+
+                address = tonumber(ffi_cast('intptr_t', result))
             end
 
             local lines = list()
