@@ -45,7 +45,7 @@
   </package>
   <package>
     <name>pv</name>
-    <version>4.1.4.1</version>
+    <version>4.2.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>entities</dependency>
@@ -63,7 +63,7 @@
       <file size="1970">pv/pv.lua</file>
       <file size="5218">pv/component/logger.lua</file>
       <file size="8772">pv/component/scanner.lua</file>
-      <file size="15899">pv/component/tracker.lua</file>
+      <file size="18347">pv/component/tracker.lua</file>
       <file size="1485">pv/pv/dashboard.lua</file>
       <file size="4697">pv/pv/pv.lua</file>
       <file size="2129">pv/pv/state.lua</file>
