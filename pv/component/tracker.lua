@@ -183,8 +183,7 @@ do
                 return tostring(value) .. ' (' .. tostring(lookup or '?') .. ')'
             end
 
-            build_packet_fields = function(buffer, ftype)
-                local values = ffi_cast(ftype.name .. '*', buffer)
+            build_packet_fields = function(cdata, ftype)
                 local arranged = ftype.arranged
                 local fields = ftype.fields
                 local lines = {}
@@ -195,7 +194,7 @@ do
                         local label = field.label
                         lines_count = lines_count + 1
 
-                        local value = values[field.label]
+                        local value = cdata[label]
 
                         local tag = field.type.tag
                         if tag == 'data' then
@@ -251,22 +250,20 @@ do
                 lookup_byte[string_byte(char)] = '\\' .. char
             end
 
-            build_packet_table = function(buffer, end_data, color_table)
-                local address = 0
-                local base_offset = 0
-                local end_char = band(end_data + 0xF, bnot(0xF))
+            build_packet_table = function(buffer, size, color_table)
+                local end_char = band(size + 0xF, bnot(0xF))
 
                 local lookup_hex = {}
                 local lookup_char = {}
-                for i = end_data, end_char - 1 do
+                for i = 0, size - 1 do
+                    local byte = buffer[i]
+                    lookup_hex[i] = hex_zero[byte]
+                    lookup_char[i] = lookup_byte[byte] or '.'
+                end
+                for i = size, end_char - 1 do
                     lookup_hex[i] = '--'
                     lookup_char[i] = '-'
                     color_table[i] = '#606060'
-                end
-                for i = base_offset, end_data - 1 do
-                    local byte = string_byte(buffer, i - base_offset + 1)
-                    lookup_hex[i] = hex_zero[byte]
-                    lookup_char[i] = lookup_byte[byte] or '.'
                 end
 
                 local lines = {}
@@ -274,7 +271,7 @@ do
                 lines[2] = '----------------------------------------------------------------------'
                 for row = 0, end_char / 0x10 - 1 do
                     local index_offset = 0x10 * row
-                    local prefix = hex_raw[math_floor((address - base_offset + index_offset) / 0x10)] .. ' | '
+                    local prefix = hex_raw[math_floor((index_offset) / 0x10)] .. ' | '
                     local hex_table = {}
                     local char_table = {}
                     for i = 0, 0xF do
@@ -354,7 +351,6 @@ do
 
         local build_packet_extras
         do
-            local ffi_cast = ffi.cast
             local table_concat = table.concat
             local table_sort = table.sort
 
@@ -382,8 +378,7 @@ do
                 return table_concat(lines, '\n')
             end
 
-            build_packet_extras = function(buffer, ftype)
-                local values = ffi_cast(ftype.name .. '*', buffer)
+            build_packet_extras = function(cdata, ftype)
                 local arranged = ftype.arranged
                 local arranged_count = #arranged
                 local arranged_labels = set()
@@ -396,7 +391,7 @@ do
 
                 local subset = {}
 
-                for key, value in pairs(values) do
+                for key, value in pairs(cdata) do
                     if not arranged_labels:contains(key) then
                         subset[key] = value
                     end
@@ -406,15 +401,22 @@ do
             end
         end
 
-        build_packet_string = function(buffer, size, ftype)
-            local color_table = build_color_table(size, ftype)
+        do
+            local ffi_cast = ffi.cast
 
-            local table_string = build_packet_table(buffer, size, color_table)
-            local fields = ftype and build_packet_fields(buffer, ftype)
+            build_packet_string = function(info, index, ftype)
+                local size = info[index .. '_size']
+                local buffer = info['_' .. index]
+                local cdata = ffi_cast(ftype.name .. '*', buffer)
+                local color_table = build_color_table(size, ftype)
 
-            local extras = ftype and build_packet_extras(buffer, ftype)
+                local table_string = build_packet_table(buffer, size, color_table)
+                local fields = ftype and build_packet_fields(cdata, ftype)
 
-            return '[' .. table_string .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
+                local extras = ftype and build_packet_extras(cdata, ftype)
+
+                return '[' .. table_string .. (fields and '\n\n' .. fields or '') .. (extras and '\n\nDerived fields:\n\n' .. extras or '') .. ']{Consolas 12px}'
+            end
         end
     end
 
@@ -427,8 +429,8 @@ do
 
         tracked:add({
             info = struct.copy(info, types.current),
-            original = build_packet_string(info.original, info.original_size, ftype),
-            modified = build_packet_string(info.modified, info.modified_size, ftype),
+            original = build_packet_string(info, 'original', ftype),
+            modified = build_packet_string(info, 'modified', ftype),
         })
     end)
 end

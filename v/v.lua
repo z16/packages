@@ -31,10 +31,10 @@ end
 local window_state = {
     title = 'Watched values',
     style = 'normal',
-    x = 1100,
+    x = 1000,
     y = 0,
-    height = 900,
-    width = 324,
+    height = 400,
+    width = 295,
 }
 
 setmetatable(_G, {
