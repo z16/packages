@@ -1,4 +1,4 @@
-$includePackages = "ja0", "mv", "pv", "util", "v", "cw"
+$includePackages = "ja0", "mv", "pv", "util", "v", "cw", "gs"
 
 $knownPackages = Get-ChildItem -Directory |
     Where-Object {
