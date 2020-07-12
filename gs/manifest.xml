@@ -1,0 +1,23 @@
+<package>
+  <name>gs</name>
+  <version>1.0.0.0</version>
+  <type>addon</type>
+  <dependencies>
+    <dependency>account</dependency>
+    <dependency>action</dependency>
+    <dependency>client_data</dependency>
+    <dependency>clipboard</dependency>
+    <dependency>enumerable</dependency>
+    <dependency>equipment</dependency>
+    <dependency>expression</dependency>
+    <dependency>file</dependency>
+    <dependency>items</dependency>
+    <dependency>list</dependency>
+    <dependency>packet</dependency>
+    <dependency>player</dependency>
+    <dependency>resources</dependency>
+    <dependency>string</dependency>
+    <dependency>win32</dependency>
+    <dependency>world</dependency>
+  </dependencies>
+</package>
