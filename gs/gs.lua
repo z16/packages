@@ -116,13 +116,18 @@ do
 
     local bags = resources.bags
 
-    local trigger = function(fn, act)
+    local swap_event = event.new()
+    gs.swap_event = swap_event
+
+    local trigger = function(tag, fn, act)
         if fn == nil then
             return
         end
 
         local current_set = {}
-        user.current_set = current_set
+        state.current_set = current_set
+        local equipped_sets = {}
+        state.equipped_sets = equipped_sets
         local parsed = parse_action(act)
         fn(parsed)
 
@@ -156,31 +161,35 @@ do
             equipment = equipset,
         })
 
-        user.current_set = {}
+        local name = parsed.name
+        swap_event:trigger(name and tag .. name or tag, equipset, equipped_sets)
+
+        state.current_set = nil
+        state.equipped_sets = nil
     end
 
     action.pre_action:register(function(act)
-        trigger(user.pre_action, act)
+        trigger('pre_action: ', user.pre_action, act)
     end)
 
     action.mid_action:register(function(act)
-        trigger(user.mid_action, act)
+        trigger('mid_action: ', user.mid_action, act)
     end)
 
     action.post_action:register(function(act)
-        trigger(user.reset, act)
+        trigger('reset (post): ', user.reset, act)
     end)
 
     gsc:register('reset', function()
-        trigger(user.reset, reset_category)
+        trigger('reset (command)', user.reset, reset_category)
     end)
 
     player.state_change:register(function()
-        trigger(user.reset, state_category)
+        trigger('reset (state): ', user.reset, state_category)
     end)
 
     world.zone_change:register(function()
-        trigger(user.reset, zone_category)
+        trigger('reset (zone): ', user.reset, zone_category)
     end)
 end
 
@@ -225,6 +234,7 @@ local slot_id_name_map = {
 local load
 do
     local sets_map
+    local paths_map
 
     local path_offset = #user_path + 2
 
@@ -320,12 +330,20 @@ do
         load_sets = function(sets_file)
             if sets_file == nil then
                 user.sets = {}
-                state.set_map = {}
+                state.sets_map = {}
                 state.sets_path = nil
+                state.paths_map = {}
                 return;
             end
 
-            user.sets, state.sets_map, state.sets_path = parse_sets(sets_file)
+            user.sets, sets_map, state.sets_path = parse_sets(sets_file)
+            state.sets_map = sets_map
+
+            paths_map = {}
+            for path, set in pairs(state.sets_map) do
+                paths_map[set] = path
+            end
+            state.paths_map = paths_map
         end
     end
 
@@ -348,13 +366,12 @@ do
             set = sets_map[set]
         end
 
-        local current = user.current_set
+        local current = state.current_set
+        local equipped_sets = state.equipped_sets
+        equipped_sets[#equipped_sets + 1] = paths_map[set]
 
         for slot, item in pairs(set) do -- TODO performance array?
-            local current_item = current[slot]
-            if current_item == nil or not current[slot].lock then
-                current[slot] = item
-            end
+            current[slot] = item
         end
     end
 

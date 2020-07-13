@@ -1,6 +1,6 @@
 <package>
   <name>gs</name>
-  <version>1.0.0.3</version>
+  <version>1.1.0.0</version>
   <type>addon</type>
   <dependencies>
     <dependency>account</dependency>
@@ -17,6 +17,7 @@
     <dependency>player</dependency>
     <dependency>resources</dependency>
     <dependency>string</dependency>
+    <dependency>struct</dependency>
     <dependency>win32</dependency>
     <dependency>world</dependency>
   </dependencies>

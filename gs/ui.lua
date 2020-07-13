@@ -9,6 +9,7 @@ local list = require('list')
 local math = require('math')
 local player = require('player')
 local string = require('string.ext')
+local struct = require('struct')
 local table = require('table')
 local ui = require('core.ui')
 local unicode = require('core.unicode')
@@ -33,33 +34,43 @@ local generate_lines
 
 local visible = false
 
+local grid_type = struct.uint16[16]
+
 local equipment_display
 local set_display
+local display_grid
 do
     local math_floor = math.floor
 
     local grid_path = windower.package_path .. '\\equipment_grid.png'
 
-    local slot_map = { [0] =
-        0,  1,  2,  3,
-        4,  9, 11, 12,
-        5,  6, 13, 14,
-        15,10,  7,  8,
-    }
+    local grid = struct.new(grid_type)
 
-    local icon_size = 34
-
-    equipment_display = function(x, y)
+    display_grid = function(x, y, grid)
         ui_location(x, y)
         ui_image(grid_path)
 
         for i = 0, 15 do
-            ui_location(x + (i % 4) * icon_size, y + math_floor(i / 4) * icon_size)
-            local id = equipment[slot_map[i]].item.id
-            if id ~= 0 then
+            ui_location(x + (i % 4) * 34, y + math_floor(i / 4) * 34)
+            local id = grid[i]
+            if id > 0 then
                 ui_image(client_data_items[id].icon, { name = 'gs_item_' .. tostring(id) })
             end
         end
+    end
+
+    local slot_map = { [0] =
+         0,  1,  2,  3,
+         4,  9, 11, 12,
+         5,  6, 13, 14,
+        15, 10,  7,  8,
+    }
+
+    equipment_display = function(x, y)
+        for i = 0, 15 do
+            grid[i] = equipment[slot_map[i]].item.id
+        end
+        display_grid(x, y, grid)
     end
 
     local ids = setmetatable({}, {
@@ -71,23 +82,17 @@ do
     })
 
     set_display = function(x, y, set)
-        ui_location(x, y)
-        ui_image(grid_path)
-
         for i = 0, 15 do
             local item = set[slot_map[i]]
-            if item ~= nil then
-                ui_location(x + (i % 4) * icon_size, y + math_floor(i / 4) * icon_size)
-                local id = ids[item.normalized]
-                ui_image(client_data_items[id].icon, { name = 'gs_item_' .. tostring(id) })
-            end
+            grid[i] = item ~= nil and ids[item.normalized] or 0
         end
-
-        return y + icon_size * 4
+        display_grid(x, y, grid)
+        return y + 136
     end
 end
 
 local visible_sets = false
+local visible_swaps = false
 
 local current_player_info
 local current_sets_path
@@ -96,9 +101,9 @@ do
     local window_state = {
         title = 'GearSwap',
         x = 300,
-        y = 50,
+        y = 20,
         width = 290,
-        height = 500,
+        height = 400,
         closable = true,
     }
 
@@ -146,6 +151,10 @@ do
             if ui_button('gs_main_window_reload_button', 'Reload user files') then
                 gs.reload()
             end
+
+            if ui_button('gs_main_window_swaps_button', 'Show gear swaps') then
+                visible_swaps = true
+            end
         end)
 
         if window_closed then
@@ -156,10 +165,10 @@ end
 
 do
     local window_state = {
-        x = 600,
-        y = 50,
+        x = 598,
+        y = 20,
         width = 800,
-        height = 900,
+        height = 932,
         closable = true,
     }
 
@@ -928,6 +937,94 @@ do
     end)
 end
 
+local handle_swap
+do
+    local window_state = {
+        title = 'GearSwap - Swap history',
+        x = 300,
+        y = 447,
+        width = 290,
+        height = 505,
+        closable = true,
+    }
+
+    local swaps_count = 3
+    local swaps = struct.new(struct.struct({
+        tag             = {struct.string(0x100)},
+        grid            = {struct.uint16[16]},
+        paths           = {struct.string(0x100)[8]},
+        count           = {struct.int32},
+    })[swaps_count])
+
+    do
+        local ffi_fill = ffi.fill
+        local math_max = math.max
+        local math_min = math.min
+
+        local slot_map = { [0] =
+             0,  1,  2,  3,
+             4,  8,  9, 14,
+            15,  5, 13,  6,
+             7, 10, 11, 12,
+        }
+
+        handle_swap = function(tag, equipset, equipped_sets)
+            for i = 0, swaps_count - 2 do
+                swaps[i] = swaps[i + 1]
+            end
+
+            local swap = swaps[swaps_count - 1]
+            swap.tag = tag
+            local grid = swap.grid
+            ffi_fill(grid, 32)
+            for i = 1, #equipset do
+                local set = equipset[i]
+                grid[slot_map[set.slot_id]] = items.bags[set.bag_id][set.bag_index].id
+            end
+
+            local paths = swap.paths
+            local paths_count = #equipped_sets
+            swap.count = paths_count
+            local offset = math_max(paths_count - 7, 1)
+            for i = 0, math_min(paths_count - 1, 7) do
+                local paths_index = i + offset
+                paths[i] = tostring(paths_index) .. ': ' .. (equipped_sets[paths_index] or '-')
+            end
+        end
+    end
+
+    ui_display(function()
+        if not visible_swaps then
+            return
+        end
+
+        local window_closed
+        window_state, window_closed = ui_window('gs_swaps_window', window_state, function()
+            for i = 0, swaps_count - 1 do
+                local swap = swaps[i]
+                if swap.tag ~= '' then
+                    local offset = i * 166
+                    ui_location(10, 10 + offset)
+                    ui_text(swap.tag)
+
+                    local grid_y = 30 + offset
+                    display_grid(10, grid_y, swap.grid)
+
+                    local paths = swap.paths
+                    for j = 0, swap.count - 1 do
+                        ui_location(150, grid_y + j * 17)
+                        ui_text(paths[j])
+                    end
+                end
+            end
+        end)
+
+        if window_closed then
+            visible_swaps = false
+        end
+    end)
+end
+
 local get_player_info = function()
     if not account.logged_in then
         return '-'
@@ -960,6 +1057,8 @@ return {
         generate_lines = gs.generate_lines
 
         gs.reload_event:register(reload)
+
+        gs.swap_event:register(handle_swap)
     end,
 }
 
