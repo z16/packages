@@ -572,7 +572,7 @@ do
                     end
 
                     local path_loaded_time = path_state.loaded_time
-                    if path_loaded_time and loaded_time < path_state.modified_time then
+                    if path_loaded_time and path_loaded_time < path_state.modified_time then
                         name = name .. ' !'
                     end
                 end
