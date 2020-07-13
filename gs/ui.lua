@@ -752,7 +752,7 @@ do
                     end
 
                     ui_location(base_x + 371, y)
-                    if ui_button('gs_sets_window_remove_button_' .. path, 'Remove') then
+                    if ui_button('gs_sets_window_remove_button_' .. child_path, 'Remove') then
                         new_changes_count = new_changes_count + 1
                         new_changes[new_changes_count] = {
                             type = 'remove',
@@ -844,10 +844,11 @@ do
                     local parent = change.parent
                     local path = change.path
                     local key = change.key
+                    local parent_path = change.parent_path
 
                     parent[key] = nil
+                    sets_map[path] = nil
 
-                    local parent_path = string_sub(path, 1, math_max(#path - #key - 1, 0))
                     container_keys[parent_path] = build_container_keys(parent, parent_path)
                 end,
                 ['set to current'] = function(change)
@@ -857,17 +858,6 @@ do
 
                     parent[change.key] = value
                     sets_map[path] = value
-                end,
-                ['remove'] = function(change)
-                    local parent = change.parent
-                    local path = change.path
-                    local key = change.key
-
-                    parent[key] = nil
-                    sets_map[path] = nil
-
-                    local parent_path = string_sub(path, 1, math_max(#path - #key - 1, 0))
-                    container_keys[parent_path] = build_container_keys(parent, parent_path)
                 end,
                 ['clear'] = function(change)
                     local value = change.value
