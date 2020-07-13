@@ -336,9 +336,11 @@ do
             sets_state.loaded_time = sets_modified_time
 
             local new_changes = {}
-            state[path].changes = new_changes
+            sets_state.changes = new_changes
+            sets_state.changes_count = 0
             if path == sets_path then
                 changes = new_changes
+                changes_count = 0
                 modified_time = sets_modified_time
                 loaded_time = sets_modified_time
             end
@@ -639,7 +641,7 @@ do
                 }
             end
 
-            ui_location(x + 208, y)
+            ui_location(x + 123, y)
             if ui_button('gs_sets_window_clear_set_' .. path, 'Clear set') then
                 new_changes_count = new_changes_count + 1
                 new_changes[new_changes_count] = {
