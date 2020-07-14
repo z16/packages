@@ -11,7 +11,7 @@
   </package>
   <package>
     <name>gs</name>
-    <version>1.1.0.0</version>
+    <version>1.2.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -36,7 +36,7 @@
       <file size="2725">gs/equipment_grid.png</file>
       <file size="18720">gs/gs.lua</file>
       <file size="752">gs/manifest.xml</file>
-      <file size="37581">gs/ui.lua</file>
+      <file size="43331">gs/ui.lua</file>
     </files>
   </package>
   <package>

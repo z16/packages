@@ -2,6 +2,7 @@ local account = require('account')
 local bit = require('bit')
 local client_data_items = require('client_data.items')
 local equipment = require('equipment')
+local event = require('core.event')
 local ffi = require('ffi')
 local file = require('file')
 local items = require('items')
@@ -23,6 +24,7 @@ local ui_display = ui.display
 local ui_edit = ui.edit
 local ui_location = ui.location
 local ui_image = ui.image
+local ui_size = ui.size
 local ui_text = ui.text
 local ui_window = ui.window
 
@@ -183,25 +185,6 @@ do
     local modified_time
     local loaded_time
 
-    local slot_names = { [0] =
-        'Main:',
-        'Sub:',
-        'Range:',
-        'Ammo:',
-        'Head:',
-        'Body:',
-        'Hands:',
-        'Legs:',
-        'Feet:',
-        'Neck:',
-        'Waist:',
-        'L.Ear:',
-        'R.Ear:',
-        'L.Ring:',
-        'R.Ring:',
-        'Back:',
-    }
-
     local sets
     local sets_map
     local sets_path
@@ -214,6 +197,194 @@ do
     local content_y = top_menu_y + 50
     local editor_x = 180
     local explorer_x = 10
+
+    local new_change = event.new()
+
+    local set_builder_event = event.new()
+    do
+        local visible_builder = false
+        local path
+        local parent
+        local key
+        local build_set
+        local item_name
+
+        local builder_window_state = {
+            x = 300,
+            y = 20,
+            width = 290,
+            height = 620,
+            closable = true,
+        }
+
+        set_builder_event:register(function(set_path, set_parent, set_key)
+            path = set_path
+            parent = set_parent
+            key = set_key
+
+            build_set = {}
+            local set = sets_map[set_path]
+            for i = 0, 15 do
+                build_set[i] = set[i]
+            end
+
+            item_name = ''
+            builder_window_state.title = 'GearSwap - Set Builder - ' .. set_path
+            visible_builder = true
+        end)
+
+        local prefix_matches = setmetatable({}, {
+            __index = function(t, k)
+                local value = items:search_prefix(k:normalize())
+                t[k] = value
+                return value
+            end,
+        })
+
+        local slot_infos
+        do
+            local bit_band = bit.band
+            local bit_lshift = bit.lshift
+
+            local slot_names = { [0] =
+                'Main',
+                'Sub',
+                'Range',
+                'Ammo',
+                'Head',
+                'Body',
+                'Hands',
+                'Legs',
+                'Feet',
+                'Neck',
+                'Waist',
+                'L.Ear',
+                'R.Ear',
+                'L.Ring',
+                'R.Ring',
+                'Back',
+            }
+
+            slot_infos = setmetatable({}, {
+                __index = function(t, k)
+                    local res = {}
+                    local res_count = 0
+                    for i = 0, 15 do
+                        local value = bit_lshift(1, i)
+                        if bit_band(value, k) ~= 0 then
+                            res_count = res_count + 1
+                            res[res_count] = {
+                                slot = i,
+                                text = slot_names[i],
+                            }
+                        end
+                    end
+
+                    t[k] = res
+
+                    return res
+                end,
+            })
+        end
+
+        ui_display(function()
+            if not visible_builder then
+                return
+            end
+
+            if sets_map[path] == nil then
+                visible_builder = false
+                return
+            end
+
+            local closed
+            builder_window_state, closed = ui_window('gs_set_builder_window', builder_window_state, function()
+                ui_location(10, 10)
+                ui_text('Set: ' .. path .. ' (' .. sets_path .. ')')
+
+                local width = builder_window_state.width
+
+                ui_location(width - 90, 10)
+                if ui_button('gs_set_builder_window_save_button', 'Save') then
+                    new_change:trigger('set', {
+                        parent = parent,
+                        key = key,
+                        path = path,
+                        value = build_set,
+                    })
+
+                    visible_builder = false
+                    return
+                end
+
+                local grid_x = (width - 136) / 2
+                set_display(grid_x, 40, build_set)
+
+                local post_grid_y = 196
+                ui_location(10, post_grid_y)
+                if ui_button('gs_set_builder_window_set_current_button', 'Set to current gear', { enabled = account.logged_in }) then
+                    build_set = get_current_set()
+                end
+
+                ui_location(133, post_grid_y)
+                if ui_button('gs_set_builder_window_clear_set_button', 'Clear set') then
+                    build_set = {}
+                end
+
+                ui_location(10, post_grid_y + 32)
+                ui_text('Search item:')
+
+                ui_location(100, post_grid_y + 30)
+                item_name = ui_edit('gs_set_builder_window_item_name_edit', item_name)
+
+                local search_results_y = post_grid_y + 60
+                if #item_name > 3 then
+                    local matches = prefix_matches[item_name]
+                    local offset = 1
+                    for i = 1, #matches do
+                        local id = matches[i]
+                        local item = client_data_items[id]
+
+                        if item.flags.equippable then
+                            local index = i - offset
+                            local row_y = search_results_y + index * 36
+                            ui_location(10, row_y)
+                            ui_image(item.icon, { name = 'gs_item_' .. tostring(id) })
+
+                            ui_location(50, row_y + 6)
+                            ui_text(item.full_name)
+
+                            local infos = slot_infos[item.equipment_slots]
+                            for j = 1, #infos do
+                                local info = infos[j]
+                                ui_size(50, 21)
+                                ui_location(width - 120 + (j - 1) * 60, row_y + 3)
+                                if ui_button('gs_set_builder_window_match_equip_' .. tostring(index) .. '_' .. tostring(j), info.text) then
+                                    local full_name = item.full_name
+                                    build_set[info.slot] = {
+                                        name = full_name,
+                                        slot = info.slot,
+                                        augments = nil, -- TODO
+                                        normalized = full_name:normalize(),
+                                    }
+                                end
+                            end
+
+                            if index == 9 then
+                                break
+                            end
+                        else
+                            offset = offset + 1
+                        end
+                    end
+                end
+            end)
+
+            if closed then
+                visible_builder = false
+            end
+        end)
+    end
 
     local build_container_keys
     do
@@ -632,34 +803,50 @@ do
     do
         local math_floor = math.floor
         local math_max = math.max
-        local string_sub = string.sub
 
-        local new_changes
-        local new_changes_count
+        local slot_names = { [0] =
+            'Main:',
+            'Sub:',
+            'Range:',
+            'Ammo:',
+            'Head:',
+            'Body:',
+            'Hands:',
+            'Legs:',
+            'Feet:',
+            'Neck:',
+            'Waist:',
+            'L.Ear:',
+            'R.Ear:',
+            'L.Ring:',
+            'R.Ring:',
+            'Back:',
+        }
 
         local display_set = function(set, x, y, path, parent, key)
             ui_location(x, y)
             if ui_button('gs_sets_window_set_current_' .. path, 'Set to current gear', { enabled = account.logged_in }) then
-                new_changes_count = new_changes_count + 1
-                new_changes[new_changes_count] = {
-                    type = 'set to current',
+                new_change:trigger('set', {
                     parent = parent,
                     key = key,
                     path = path,
                     value = get_current_set(),
-                }
+                })
             end
 
             ui_location(x + 123, y)
             if ui_button('gs_sets_window_clear_set_' .. path, 'Clear set') then
-                new_changes_count = new_changes_count + 1
-                new_changes[new_changes_count] = {
-                    type = 'clear',
+                new_change:trigger('clear', {
                     parent = parent,
                     key = key,
                     path = path,
                     value = {},
-                }
+                })
+            end
+
+            ui_location(x + 203, y)
+            if ui_button('gs_sets_window_builder_' .. path, 'Build set') then
+                set_builder_event:trigger(path, parent, key)
             end
 
             local end_y = set_display(x, y + 30, set)
@@ -698,14 +885,12 @@ do
                 local child_path = path == '' and new_text or path .. '/' .. new_text
                 visible_paths[child_path] = true
 
-                new_changes_count = new_changes_count + 1
-                new_changes[new_changes_count] = {
-                    type = 'new set',
+                new_change:trigger('new set', {
                     parent = container,
                     key = new_text,
                     path = child_path,
                     value = {},
-                }
+                })
             end
 
             ui_location(x + 256 + path_size, y)
@@ -714,14 +899,12 @@ do
                 local child_path = path == '' and new_text or path .. '/' .. new_text
                 visible_paths[child_path] = true
 
-                new_changes_count = new_changes_count + 1
-                new_changes[new_changes_count] = {
-                    type = 'new container',
+                new_change:trigger('new container', {
                     parent = container,
                     key = new_text,
                     path = path,
                     value = {},
-                }
+                })
             end
 
             y = y + 30
@@ -749,27 +932,23 @@ do
 
                     ui_location(base_x + 291, y)
                     if ui_button('gs_sets_window_rename_button_' .. child_path, 'Rename', { enabled = new_name ~= '' and container[new_name] == nil }) then
-                        new_changes_count = new_changes_count + 1
-                        new_changes[new_changes_count] = {
-                            type = 'rename entry',
+                        new_change:trigger('rename', {
                             parent = container,
                             old_key = name,
                             key = new_name,
                             old_path = child_path,
                             path = path == '' and new_name or path .. '/' .. new_name,
-                        }
+                        })
                     end
 
                     ui_location(base_x + 371, y)
                     if ui_button('gs_sets_window_remove_button_' .. child_path, 'Remove') then
-                        new_changes_count = new_changes_count + 1
-                        new_changes[new_changes_count] = {
-                            type = 'remove',
+                        new_change:trigger('remove', {
                             parent = container,
                             key = name,
                             path = child_path,
                             parent_path = path,
-                        }
+                        })
                     end
                 end
 
@@ -789,9 +968,8 @@ do
             return y
         end
 
-        local process_changes
         do
-            local math_max = math.max
+            local string_sub = string.sub
 
             local rename = function(old, new)
                 local caches = {
@@ -860,7 +1038,7 @@ do
 
                     container_keys[parent_path] = build_container_keys(parent, parent_path)
                 end,
-                ['set to current'] = function(change)
+                ['set'] = function(change)
                     local parent = change.parent
                     local path = change.path
                     local value = change.value
@@ -874,7 +1052,7 @@ do
                     change.parent[change.key] = value
                     sets_map[change.path] = value
                 end,
-                ['rename entry'] = function(change)
+                ['rename'] = function(change)
                     local parent = change.parent
                     local old_path = change.old_path
                     local path = change.path
@@ -891,14 +1069,13 @@ do
                 end,
             }
 
-            process_changes = function()
-                for i = 1, new_changes_count do
-                    local change = new_changes[i]
-                    changes_count = changes_count + 1
-                    changes[changes_count] = change
-                    change_fns[change.type](change)
-                end
+            local process_change = function(type, change)
+                changes_count = changes_count + 1
+                changes[changes_count] = change
+                change_fns[type](change)
             end
+
+            new_change:register(process_change)
         end
 
         display_file = function()
@@ -906,14 +1083,7 @@ do
                 return
             end
 
-            new_changes = {}
-            new_changes_count = 0
-
             display_container(sets, visible_explorer and editor_x or explorer_x, content_y, '')
-            process_changes()
-
-            new_changes = nil
-            new_changes_count = nil
         end
     end
 
