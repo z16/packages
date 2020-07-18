@@ -61,11 +61,17 @@ do
 
     local prepare
     do
+        local lookups = {
+            skill = resources.skills,
+            element = resources.elements,
+        }
+
         prepare = function(base, category)
             local res = {}
 
             for k, v in pairs(base) do
-                res[k] = v
+                local lookup = lookups[k]
+                res[k] = lookup and lookup[v] or v
             end
 
             res.category = category
@@ -176,7 +182,7 @@ do
     end)
 
     action.mid_action:register(function(act)
-        trigger('mid_action: ', user.mid_action, act)
+        trigger('mid_action: ', user.action, act)
     end)
 
     action.post_action:register(function(act)
@@ -418,18 +424,21 @@ do
 
         local root_sets = user.sets or {}
         local pre_sets = root_sets.pre or {}
-        local mid_sets = root_sets.mid or {}
 
         user.pre_action = function(act)
             equip(pre_sets[act.category])
-            equip(pre_sets[act.skill])
+            if act.skill then
+                equip(pre_sets[act.skill.name])
+            end
             equip(pre_sets[act.name])
         end
 
-        user.mid_action = function(act)
-            equip(mid_sets[act.category])
-            equip(mid_sets[act.skill])
-            equip(mid_sets[act.name])
+        user.action = function(act)
+            equip(root_sets[act.category])
+            if act.skill then
+                equip(root_sets[act.skill.name])
+            end
+            equip(root_sets[act.name])
         end
 
         user.reset = function()
