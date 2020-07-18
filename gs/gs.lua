@@ -59,16 +59,19 @@ do
     local state_category = 0x11
     local zone_category = 0x12
 
-    local prepare = function(base, category)
-        local res = {}
+    local prepare
+    do
+        prepare = function(base, category)
+            local res = {}
 
-        for k, v in pairs(base) do
-            res[k] = v
+            for k, v in pairs(base) do
+                res[k] = v
+            end
+
+            res.category = category
+
+            return res
         end
-
-        res.action_category = category
-
-        return res
     end
 
     local resources_spells = resources.spells
@@ -297,33 +300,61 @@ do
                 normalized = name_normalized,
             }
         end
+        gs.parse_item = parse_item
 
-        local parse_set
-        parse_set = function(container, path, sets)
+        local parse_set = function(container)
             local res = {}
 
             local used_slots = {}
             for key, value in pairs(container) do
-                if type(value) == 'string' or type(value) == 'table' and value.name ~= nil then
-                    sets[path] = res
-                    local item = parse_item(value, key, used_slots)
-                    local slot = item.slot
-                    used_slots[slot] = item.name
-                    res[slot] = item
-                elseif type(value) == 'table' then
-                    res[key] = parse_set(value, path == '' and key or path .. '/' .. key, sets)
-                else
+                local item = parse_item(value, key, used_slots)
+                local slot = item.slot
+                used_slots[slot] = item.name
+                res[slot] = item
+            end
+
+            return res
+        end
+        gs.parse_set = parse_set
+
+        local is_set = function(container)
+            for key, value in pairs(container) do
+                local value_type = type(value)
+                if value_type == 'string' or value_type == 'table' and value.name ~= nil then
+                    return true
+                elseif value_type ~= 'table' then
                     error('Unknown definition for key \'' .. tostring(key) .. '\': ' .. tostring(value))
                 end
+            end
+
+            return false
+        end
+
+        local parse_node
+        local parse_container = function(container, path, sets)
+            local res = {}
+
+            for key, value in pairs(container) do
+                res[key] = parse_node(value, path == '' and key or path .. '/' .. key, sets)
             end
 
             return res
         end
 
+        parse_node = function(container, path, sets)
+            if is_set(container) then
+                local set = parse_set(container)
+                sets[path] = set
+                return set
+            end
+
+            return parse_container(container, path, sets)
+        end
+
         local parse_sets = function(file)
             local sets = {}
             local sub_path = file.path:sub(path_offset)
-            return parse_set(file:load(), '', sets), sets, sub_path
+            return parse_node(file:load(), '', sets), sets, sub_path
         end
         gs.parse_sets = parse_sets
 

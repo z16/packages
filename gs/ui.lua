@@ -1,6 +1,7 @@
 local account = require('account')
 local bit = require('bit')
 local client_data_items = require('client_data.items')
+local clipboard = require('clipboard')
 local equipment = require('equipment')
 local event = require('core.event')
 local ffi = require('ffi')
@@ -32,7 +33,9 @@ local gs
 
 local parse_sets
 local get_current_set
+local copy
 local generate_lines
+local parse_set
 
 local visible = false
 
@@ -200,8 +203,12 @@ do
 
     local new_change = event.new()
 
+    local copied
+
     local set_builder_event = event.new()
     do
+        local math_floor = math.floor
+
         local visible_builder = false
         local path
         local parent
@@ -849,6 +856,22 @@ do
                 set_builder_event:trigger(path, parent, key)
             end
 
+            ui_location(x + 283, y)
+            if ui_button('gs_sets_window_copy_' .. path, 'Copy') then
+                copy(set)
+                copied = clipboard.get()
+            end
+
+            ui_location(x + 363, y)
+            if ui_button('gs_sets_window_paste_' .. path, 'Paste', { enabled = copied ~= nil }) then
+                new_change:trigger('set', {
+                    parent = parent,
+                    key = key,
+                    path = path,
+                    value = parse_set(loadstring('return ' .. copied)()),
+                })
+            end
+
             local end_y = set_display(x, y + 30, set)
 
             x = x + 150
@@ -1224,7 +1247,9 @@ return {
 
         parse_sets = gs.parse_sets
         get_current_set = gs.get_current_set
+        copy = gs.copy
         generate_lines = gs.generate_lines
+        parse_set = gs.parse_set
 
         gs.reload_event:register(reload)
 
