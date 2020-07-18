@@ -329,7 +329,7 @@ do
 
                 local post_grid_y = 196
                 ui_location(10, post_grid_y)
-                if ui_button('gs_set_builder_window_set_current_button', 'Set to current gear', { enabled = account.logged_in }) then
+                if ui_button('gs_set_builder_window_set_current_button', 'Set to current gear', { enabled = items.ready }) then
                     build_set = get_current_set()
                 end
 
@@ -832,7 +832,7 @@ do
 
         local display_set = function(set, x, y, path, parent, key)
             ui_location(x, y)
-            if ui_button('gs_sets_window_set_current_' .. path, 'Set to current gear', { enabled = account.logged_in }) then
+            if ui_button('gs_sets_window_set_current_' .. path, 'Set to current gear', { enabled = items.ready }) then
                 new_change:trigger('set', {
                     parent = parent,
                     key = key,
