@@ -6,13 +6,15 @@ local equipment = require('equipment')
 local event = require('core.event')
 local ffi = require('ffi')
 local file = require('file')
+local fn = require('expression')
 local items = require('items')
 local list = require('list')
 local math = require('math')
 local player = require('player')
+local resources = require('resources')
 local string = require('string.ext')
 local struct = require('struct')
-local table = require('table')
+local table = require('table.ext')
 local ui = require('core.ui')
 local unicode = require('core.unicode')
 local windower = require('core.windower')
@@ -390,6 +392,147 @@ do
 
             if closed then
                 visible_builder = false
+            end
+        end
+    end
+
+    local name_selector_event = event.new()
+    local display_name_selector
+    do
+        local name_selector_window_state = {
+            x = 1406,
+            y = 20,
+            width = 300,
+            height = 932,
+        }
+
+        local visible_name_selector = false
+
+        local path
+        local text_container
+        local spells
+        local job_abilities
+        local weapon_skills
+        do
+            local make_category = function(label, identifier)
+                local names = resources[identifier]:select(fn.index('name')):select(string.normalize):order_by(fn.id):to_list()
+                local name_lookup = {}
+                for _, action in pairs(resources[identifier]) do
+                    name_lookup[action.name:normalize()] = action.name
+                end
+
+                local found
+                do
+                    local string_normalize = string.normalize
+                    local string_sub = string.sub
+                    local table_prefix_search = table.prefix_search
+
+                    found = setmetatable({}, {
+                        __index = function(t, k)
+                            local name = string_normalize(k)
+                            local prev = rawget(t, string_sub(name, 1, #name - 1))
+                            local value = list(table_prefix_search(prev or names, name)):take(10):to_list()
+                            t[k] = value
+                            return value
+                        end,
+                    })
+                end
+
+                return {
+                    identifier = identifier,
+                    label = label,
+                    name_lookup = name_lookup,
+                    found = found,
+                }
+            end
+
+            spells = make_category('Spells:', 'spells')
+            job_abilities = make_category('Job abilities:', 'job_abilities')
+            weapon_skills = make_category('Weapon skills', 'weapon_skills')
+        end
+
+        name_selector_event:register(function(selected_path, selected_text_container)
+            path = selected_path
+            text_container = selected_text_container
+
+            spells.search = ''
+            job_abilities.search = ''
+            weapon_skills.search = ''
+
+            name_selector_window_state.title = 'GearSwap - Name selector - ' .. selected_path
+            visible_name_selector = true
+        end)
+
+        local categories = {
+            'Magic',
+            'JobAbility',
+            'WeaponSkill',
+            'RangedAttack',
+            'Item',
+            'PetAbility',
+        }
+
+        local y
+        local button = function(entries, prefix, lookup)
+            local length = #entries
+            if length == 0 then
+                ui_location(40, y)
+                ui_text('No ' .. prefix .. ' found.')
+                y = y + 30
+                return
+            end
+
+            for i = 1, length do
+                local normalized = entries[i]
+                local name = lookup and lookup[normalized] or normalized
+                ui_location(40, y)
+                if ui_button('gs_name_selector_window_' .. prefix .. '_button_' .. normalized, name) then
+                    text_container[path] = name
+                    visible_name_selector = false
+                end
+                y = y + 30
+            end
+        end
+
+        local search = function(category)
+            ui_location(10, y)
+            ui_text(category.label)
+
+            local identifier = category.identifier
+
+            y = y + 20
+            ui_location(40, y)
+            local new_search = ui_edit('gs_name_selector_window_' .. identifier .. '_search', category.search)
+            category.search = new_search
+            y = y + 30
+            if #category.search > 0 then
+                button(category.found[new_search], identifier, category.name_lookup)
+            else
+                y = y + 30
+            end
+        end
+
+        display_name_selector = function()
+            if not visible_name_selector then
+                return
+            end
+
+            local closed
+            name_selector_window_state, closed = ui_window('gs_name_selector_window', name_selector_window_state, function()
+                y = 10
+                ui_location(10, y)
+                ui_text('Categories:')
+
+                y = y + 20
+                button(categories, 'categories')
+
+                search(spells)
+                search(job_abilities)
+                search(weapon_skills)
+            end)
+
+            if closed then
+                visible_name_selector = false
             end
         end
     end
@@ -896,14 +1039,14 @@ do
             ui_location(x, y)
             ui_text('[' .. path_str .. ']{Consolas #40C040}/')
 
-            local path_size = 6.5 * #path_str
-            ui_location(x + 10 + path_size, y - 2)
+            local path_x = x + 6.5 * #path_str
+            ui_location(path_x + 10, y - 2)
             local new_text = ui_edit('gs_sets_window_new_edit_' .. path, new_texts[path] or '')
             new_texts[path] = new_text
 
             local enabled_create = new_text ~= '' and container[new_text] == nil
 
-            ui_location(x + 176 + path_size, y)
+            ui_location(path_x + 176, y)
             if ui_button('gs_sets_window_new_set_button_' .. path, 'Create set', {enabled = enabled_create}) then
                 new_texts[path] = nil
                 local child_path = path == '' and new_text or path .. '/' .. new_text
@@ -917,7 +1060,7 @@ do
                 })
             end
 
-            ui_location(x + 256 + path_size, y)
+            ui_location(path_x + 256, y)
             if ui_button('gs_sets_window_new_table_button_' .. path, 'Create table', {enabled = enabled_create}) then
                 new_texts[path] = nil
                 local child_path = path == '' and new_text or path .. '/' .. new_text
@@ -930,6 +1073,12 @@ do
                     value = {},
                 })
             end
+
+            ui_location(path_x + 344, y)
+            if ui_button('gs_sets_window_new_select_name_button_' .. path, 'Select name') then
+                name_selector_event:trigger(path, new_texts)
+            end
+
 
             y = y + 30
 
@@ -973,6 +1122,11 @@ do
                             path = child_path,
                             parent_path = path,
                         })
+                    end
+
+                    ui_location(base_x + 451, y)
+                    if ui_button('gs_sets_window_select_name_button_' .. child_path, 'Select name') then
+                        name_selector_event:trigger(child_path, rename_texts)
                     end
                 end
 
@@ -1141,6 +1295,7 @@ do
         end)
 
         display_builder()
+        display_name_selector()
 
         process_changes()
 

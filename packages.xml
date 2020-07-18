@@ -11,7 +11,7 @@
   </package>
   <package>
     <name>gs</name>
-    <version>1.4.0.0</version>
+    <version>1.5.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -29,14 +29,15 @@
       <dependency>resources</dependency>
       <dependency>string</dependency>
       <dependency>struct</dependency>
+      <dependency>table</dependency>
       <dependency>win32</dependency>
       <dependency>world</dependency>
     </dependencies>
     <files>
       <file size="2725">gs/equipment_grid.png</file>
       <file size="19749">gs/gs.lua</file>
-      <file size="752">gs/manifest.xml</file>
-      <file size="44308">gs/ui.lua</file>
+      <file size="787">gs/manifest.xml</file>
+      <file size="49658">gs/ui.lua</file>
     </files>
   </package>
   <package>
