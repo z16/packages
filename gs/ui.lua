@@ -206,6 +206,7 @@ do
     local copied
 
     local set_builder_event = event.new()
+    local display_builder
     do
         local math_floor = math.floor
 
@@ -294,7 +295,7 @@ do
             })
         end
 
-        ui_display(function()
+        display_builder = function()
             if not visible_builder then
                 return
             end
@@ -390,7 +391,7 @@ do
             if closed then
                 visible_builder = false
             end
-        end)
+        end
     end
 
     local build_container_keys
@@ -991,122 +992,137 @@ do
             return y
         end
 
-        do
-            local string_sub = string.sub
-
-            local rename = function(old, new)
-                local caches = {
-                    sets_map,
-                    visible_paths,
-                    container_keys,
-                    new_texts,
-                    rename_texts,
-                }
-
-                local old_search = old .. '/'
-                local old_key_size = #old_search
-
-                for i = 1, #caches do
-                    local cache = caches[i]
-
-                    local found = {}
-                    local found_count = 0
-                    for path in pairs(cache) do
-                        if path == old or path:starts_with(old_search) then
-                            found_count = found_count + 1
-                            found[found_count] = path
-                        end
-                    end
-
-                    for j = 1, found_count do
-                        local old_key = found[j]
-                        local new_key = new .. old_key:sub(old_key_size + 1)
-                        cache[new_key] = cache[old_key]
-                        cache[old_key] = nil
-                    end
-                end
-            end
-
-            local change_fns = {
-                ['new set'] = function(change)
-                    local parent = change.parent
-                    local path = change.path
-                    local key = change.key
-                    local value = change.value
-
-                    parent[key] = value
-                    sets_map[path] = value
-
-                    local parent_path = string_sub(path, 1, math_max(#path - #key - 1, 0))
-                    container_keys[parent_path] = build_container_keys(parent, parent_path)
-                end,
-                ['new container'] = function(change)
-                    local parent = change.parent
-                    local path = change.path
-                    local key = change.key
-
-                    parent[key] = change.value
-
-                    container_keys[path] = build_container_keys(parent, path)
-                    container_keys[path == '' and key or path .. '/' .. key] = {}
-                end,
-                ['remove'] = function(change)
-                    local parent = change.parent
-                    local path = change.path
-                    local key = change.key
-                    local parent_path = change.parent_path
-
-                    parent[key] = nil
-                    sets_map[path] = nil
-
-                    container_keys[parent_path] = build_container_keys(parent, parent_path)
-                end,
-                ['set'] = function(change)
-                    local parent = change.parent
-                    local path = change.path
-                    local value = change.value
-
-                    parent[change.key] = value
-                    sets_map[path] = value
-                end,
-                ['clear'] = function(change)
-                    local value = change.value
-
-                    change.parent[change.key] = value
-                    sets_map[change.path] = value
-                end,
-                ['rename'] = function(change)
-                    local parent = change.parent
-                    local old_path = change.old_path
-                    local path = change.path
-                    local old_key = change.old_key
-                    local key = change.key
-
-                    parent[key] = parent[old_key]
-                    parent[old_key] = nil
-
-                    rename(old_path, path)
-
-                    local parent_path = string_sub(path, 1, math_max(#path - #key - 1, 0))
-                    container_keys[parent_path] = build_container_keys(parent, parent_path)
-                end,
-            }
-
-            local process_change = function(type, change)
-                changes_count = changes_count + 1
-                changes[changes_count] = change
-                change_fns[type](change)
-            end
-
-            new_change:register(process_change)
-        end
-
         display_file = function()
             if sets_path == nil then
                 return
             end
 
             display_container(sets, visible_explorer and editor_x or explorer_x, content_y, '')
+        end
+    end
+
+    local process_changes
+    do
+        local math_max = math.max
+        local string_sub = string.sub
+
+        local rename = function(old, new)
+            local caches = {
+                sets_map,
+                visible_paths,
+                container_keys,
+                new_texts,
+                rename_texts,
+            }
+
+            local old_search = old .. '/'
+            local old_key_size = #old_search
+
+            for i = 1, #caches do
+                local cache = caches[i]
+
+                local found = {}
+                local found_count = 0
+                for path in pairs(cache) do
+                    if path == old or path:starts_with(old_search) then
+                        found_count = found_count + 1
+                        found[found_count] = path
+                    end
+                end
+
+                for j = 1, found_count do
+                    local old_key = found[j]
+                    local new_key = new .. old_key:sub(old_key_size + 1)
+                    cache[new_key] = cache[old_key]
+                    cache[old_key] = nil
+                end
+            end
+        end
+
+        local change_fns = {
+            ['new set'] = function(change)
+                local parent = change.parent
+                local path = change.path
+                local key = change.key
+                local value = change.value
+
+                parent[key] = value
+                sets_map[path] = value
+
+                local parent_path = string_sub(path, 1, math_max(#path - #key - 1, 0))
+                container_keys[parent_path] = build_container_keys(parent, parent_path)
+            end,
+            ['new container'] = function(change)
+                local parent = change.parent
+                local path = change.path
+                local key = change.key
+
+                parent[key] = change.value
+
+                container_keys[path] = build_container_keys(parent, path)
+                container_keys[path == '' and key or path .. '/' .. key] = {}
+            end,
+            ['remove'] = function(change)
+                local parent = change.parent
+                local path = change.path
+                local key = change.key
+                local parent_path = change.parent_path
+
+                parent[key] = nil
+                sets_map[path] = nil
+
+                container_keys[parent_path] = build_container_keys(parent, parent_path)
+            end,
+            ['set'] = function(change)
+                local parent = change.parent
+                local path = change.path
+                local value = change.value
+
+                parent[change.key] = value
+                sets_map[path] = value
+            end,
+            ['clear'] = function(change)
+                local value = change.value
+
+                change.parent[change.key] = value
+                sets_map[change.path] = value
+            end,
+            ['rename'] = function(change)
+                local parent = change.parent
+                local old_path = change.old_path
+                local path = change.path
+                local old_key = change.old_key
+                local key = change.key
+
+                parent[key] = parent[old_key]
+                parent[old_key] = nil
+
+                rename(old_path, path)
+
+                local parent_path = string_sub(path, 1, math_max(#path - #key - 1, 0))
+                container_keys[parent_path] = build_container_keys(parent, parent_path)
+            end,
+        }
+
+        local new_changes = {}
+        local new_changes_count = 0
+
+        new_change:register(function(type, change)
+            change.type = type
+            new_changes_count = new_changes_count + 1
+            new_changes[new_changes_count] = change
+        end)
+
+        process_changes = function()
+            for i = 1, new_changes_count do
+                local change = new_changes[i]
+                changes_count = changes_count + 1
+                changes[changes_count] = change
+                change_fns[change.type](change)
+            end
+
+            new_changes = {}
+            new_changes_count = 0
         end
     end
 
@@ -1123,6 +1139,10 @@ do
             display_explorer()
             display_file()
         end)
+
+        display_builder()
+
+        process_changes()
 
         if closed then
             visible_sets = false
