@@ -245,7 +245,22 @@ do
 
         local prefix_matches = setmetatable({}, {
             __index = function(t, k)
-                local value = items:search_prefix(k:normalize())
+                local ids = items:search_prefix(k:normalize())
+                local found = {}
+                local value = list()
+                for i = 1, #ids do
+                    local item = client_data_items[ids[i]]
+                    if item.flags.equippable then
+                        local name = item.full_name
+                        if found[name] == nil then
+                            value:add(item)
+                            found[name] = true
+                            if #value == 10 then
+                                break
+                            end
+                        end
+                    end
+                end
                 t[k] = value
                 return value
             end,
@@ -350,41 +365,30 @@ do
                 local search_results_y = post_grid_y + 60
                 if #item_name > 3 then
                     local matches = prefix_matches[item_name]
-                    local offset = 1
                     for i = 1, #matches do
-                        local id = matches[i]
-                        local item = client_data_items[id]
+                        local item = matches[i]
 
-                        if item.flags.equippable then
-                            local index = i - offset
-                            local row_y = search_results_y + index * 36
-                            ui_location(10, row_y)
-                            ui_image(item.icon, { name = 'gs_item_' .. tostring(id) })
+                        local row_y = search_results_y + (i - 1) * 36
+                        ui_location(10, row_y)
+                        ui_image(item.icon, { name = 'gs_item_' .. tostring(item.id) })
 
-                            ui_location(50, row_y + 6)
-                            ui_text(item.full_name)
+                        ui_location(50, row_y + 6)
+                        ui_text(item.full_name)
 
-                            local infos = slot_infos[item.equipment_slots]
-                            for j = 1, #infos do
-                                local info = infos[j]
-                                ui_size(50, 21)
-                                ui_location(width - 120 + (j - 1) * 60, row_y + 3)
-                                if ui_button('gs_set_builder_window_match_equip_' .. tostring(index) .. '_' .. tostring(j), info.text) then
-                                    local full_name = item.full_name
-                                    build_set[info.slot] = {
-                                        name = full_name,
-                                        slot = info.slot,
-                                        augments = nil, -- TODO
-                                        normalized = full_name:normalize(),
-                                    }
-                                end
+                        local infos = slot_infos[item.equipment_slots]
+                        for j = 1, #infos do
+                            local info = infos[j]
+                            ui_size(50, 21)
+                            ui_location(width - 120 + (j - 1) * 60, row_y + 3)
+                            if ui_button('gs_set_builder_window_match_equip_' .. tostring(i) .. '_' .. tostring(j), info.text) then
+                                local full_name = item.full_name
+                                build_set[info.slot] = {
+                                    name = full_name,
+                                    slot = info.slot,
+                                    augments = nil, -- TODO
+                                    normalized = full_name:normalize(),
+                                }
                             end
-
-                            if index == 9 then
-                                break
-                            end
-                        else
-                            offset = offset + 1
                         end
                     end
                 end
