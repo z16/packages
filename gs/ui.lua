@@ -408,6 +408,7 @@ do
             y = 20,
             width = 300,
             height = 932,
+            closable = true,
         }
 
         local visible_name_selector = false
