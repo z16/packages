@@ -165,10 +165,12 @@ do
             end
         end
 
-        packet.outgoing[0x051]:inject({
-            count = count,
-            equipment = equipset,
-        })
+        if count ~= 0 then
+            packet.outgoing[0x051]:inject({
+                count = count,
+                equipment = equipset,
+            })
+        end
 
         local name = parsed.name
         swap_event:trigger(name and tag .. name or tag, equipset, equipped_sets)
