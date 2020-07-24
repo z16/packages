@@ -10,6 +10,7 @@ local file = require('file')
 local fn = require('expression')
 local items = require('items')
 local list = require('list')
+local os = require('os.ext')
 local packet = require('packet')
 local player = require('player')
 local resources = require('resources')
@@ -514,26 +515,12 @@ gs.reload = reload
 
 local open
 do
-    local execute = win32.def({
-        name = 'ShellExecuteW',
-        returns = 'int32_t',
-        parameters = {
-            'void*',
-            'wchar_t const*',
-            'wchar_t const*',
-            'wchar_t const*',
-            'wchar_t const*',
-            'int32_t',
-        },
-        module = 'Shell32',
-        failure = fn.between(0x00, 0x20),
-    })
+    local os_open = os.open
 
-    local open_w = unicode_to_utf16('open')
     local user_path_w = unicode_to_utf16(user_path)
 
     open = function()
-        execute(windower.client_hwnd, open_w, user_path_w, nil, nil, 10)
+        os_open(user_path_w)
     end
 end
 gs.open = open
