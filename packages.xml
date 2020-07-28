@@ -11,7 +11,7 @@
   </package>
   <package>
     <name>gs</name>
-    <version>1.5.1.2</version>
+    <version>1.5.1.4</version>
     <type>addon</type>
     <dependencies>
       <dependency>account</dependency>
@@ -24,6 +24,7 @@
       <dependency>file</dependency>
       <dependency>items</dependency>
       <dependency>list</dependency>
+      <dependency>os</dependency>
       <dependency>packet</dependency>
       <dependency>player</dependency>
       <dependency>resources</dependency>
@@ -35,20 +36,20 @@
     </dependencies>
     <files>
       <file size="2725">gs/equipment_grid.png</file>
-      <file size="19806">gs/gs.lua</file>
-      <file size="787">gs/manifest.xml</file>
+      <file size="19394">gs/gs.lua</file>
+      <file size="819">gs/manifest.xml</file>
       <file size="49788">gs/ui.lua</file>
     </files>
   </package>
   <package>
     <name>ja0</name>
-    <version>1.0.0.0</version>
+    <version>2.0.0.0</version>
     <type>addon</type>
     <dependencies>
       <dependency>target</dependency>
     </dependencies>
     <files>
-      <file size="283">ja0/ja0.lua</file>
+      <file size="1275">ja0/ja0.lua</file>
       <file size="169">ja0/manifest.xml</file>
     </files>
   </package>
