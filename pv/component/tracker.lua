@@ -122,6 +122,8 @@ end
 do
     local types = packet.types
 
+    local struct_copy = struct.copy
+
     local build_packet_string
     do
         local colors = {}
@@ -161,7 +163,6 @@ do
 
         local build_packet_fields
         do
-            local ffi_cast = ffi.cast
             local math_floor = math.floor
             local string_byte = string.byte
             local string_format = string.format
@@ -428,7 +429,7 @@ do
         local ftype = types[info.path]
 
         tracked:add({
-            info = struct.copy(info, types.current),
+            info = struct_copy(info, types.current),
             original = build_packet_string(info, 'original', ftype),
             modified = build_packet_string(info, 'modified', ftype),
         })
@@ -453,44 +454,54 @@ data_outgoing.exclude = display_outgoing.exclude
 -- UI
 
 do
-    local button = ui.button
-    local check = ui.check
-    local edit = ui.edit
-    local location = ui.location
-    local text = ui.text
     local os_date = os.date
+    local edit_state = ui.edit_state
 
-    tracker.dashboard = function(pos)
+    local edit_incoming = edit_state()
+    local edit_outgoing = edit_state()
+
+    edit_incoming.text = display_incoming.pattern
+    edit_outgoing.text = display_outgoing.pattern
+
+    tracker.dashboard = function(layout, pos)
         local active = tracker.running()
 
-        pos(10, 50)
-        text('[Tracking]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
+        pos(0, 50)
+        layout:label('[Tracking]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
 
-        pos(20, 30)
-        text('Incoming IDs')
-        pos(190, 0)
-        text('Outgoing IDs')
+        pos(10, 30)
+        layout:label('Incoming IDs')
+        pos(180, 0)
+        layout:label('Outgoing IDs')
 
-        pos(20, 20)
-        display_incoming.pattern = edit('pv_track_pattern_incoming', display_incoming.pattern)
-        pos(190, 0)
-        display_outgoing.pattern = edit('pv_track_pattern_outgoing', display_outgoing.pattern)
+        pos(10, 20)
+        layout:edit(edit_incoming)
+        display_incoming.pattern = edit_incoming.text
+        pos(180, 0)
+        layout:edit(edit_outgoing)
+        display_outgoing.pattern = edit_outgoing.text
 
-        pos(18, 30)
-        if check('pv_track_exclude_incoming', 'Exclude IDs', display_incoming.exclude) then
+        pos(10, 30)
+        layout:width(160)
+        if layout:check('tracker_incoming', 'Exclude IDs', display_incoming.exclude) then
             display_incoming.exclude = not display_incoming.exclude
         end
-        pos(188, 0)
-        if check('pv_track_exclude_outgoing', 'Exclude IDs', display_outgoing.exclude) then
+        pos(180, 0)
+        layout:width(160)
+        if layout:check('tracker_outgoing', 'Exclude IDs', display_outgoing.exclude) then
             display_outgoing.exclude = not display_outgoing.exclude
         end
 
-        pos(20, 20)
-        if button('pv_track_start', active and 'Restart tracker' or 'Start tracker', { enabled = tracker.valid() }) then
+        pos(10, 20)
+        layout:width(90)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button(active and 'Restart tracker' or 'Start tracker') and tracker.valid() then
             tracker.start()
         end
-        pos(120, 0)
-        if button('pv_track_stop', 'Stop tracker', { enabled = active }) then
+        pos(110, 0)
+        layout:width(90)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Stop tracker') and active then
             tracker.stop()
         end
     end
@@ -502,25 +513,28 @@ do
     local display_index
     local mode = 'modified'
 
-    tracker.window = function()
+    tracker.window = function(layout)
         local tracked_count = #tracked
         local index = display_index or tracked_count
 
-        location(10, 10)
-        if button('pv_track_previous', 'Previous', { enabled = index > 1 }) then
+        layout:move(0, 0)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Previous') and index > 1 then
             display_index = index - 1
         end
 
-        location(150, 10)
-        text('Showing ' .. (display_index and tostring(index) .. '/' or 'latest of ') .. tostring(tracked_count))
+        layout:move(140, 0)
+        layout:label('Showing ' .. (display_index and tostring(index) .. '/' or 'latest of ') .. tostring(tracked_count))
 
-        location(300, 10)
-        if button('pv_track_next', 'Next', { enabled = index < tracked_count }) then
+        layout:move(290, 0)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Next') and index < tracked_count then
             display_index = index + 1
         end
 
-        location(395, 10)
-        if button('pv_track_last', 'Show latest', { enabled = display_index ~= nil }) then
+        layout:move(385, 0)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Show latest') and display_index ~= nil then
             display_index = nil
         end
 
@@ -532,25 +546,33 @@ do
 
         local info = entry.info
 
-        location(10, 50)
-        text('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ' | ' .. info.sequence_counter .. (info.injected and ' | injected' or '') .. (info.blocked and ' | blocked' or '') .. ']{Consolas}')
+        layout:move(0, 40)
+        layout:label('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ' | 0x' .. hex_raw[info[mode .. '_size']] .. ' | ' .. info.sequence_counter .. (info.injected and ' | injected' or '') .. (info.blocked and ' | blocked' or '') .. ']{Consolas}')
 
-        location(10, 80)
-        if button('pv_track_mode_original', 'Original', { enabled = mode ~= 'original' }) then
+        layout:move(0, 70)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Original') and mode ~= 'original' then
             mode = 'original'
         end
 
-        location(100, 80)
-        if button('pv_track_mode_modified', 'Modified', { enabled = mode ~= 'modified' }) then
+        layout:move(90, 70)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Modified') and mode ~= 'modified' then
             mode = 'modified'
         end
 
-        location(10, 110)
-        text(entry[mode])
+        layout:move(0, 100)
+        -- TODO: Remove specific width once non-wrapping layout is enabled
+        layout:width(462)
+        layout:label(entry[mode])
     end
 
-    tracker.button = function()
-        return 'PV - Tracking', 85
+    tracker.button_caption = function()
+        return 'PV - Tracking'
+    end
+
+    tracker.button_size = function()
+        return 85
     end
 
     tracker.save = function()

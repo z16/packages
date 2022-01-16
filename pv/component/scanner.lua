@@ -236,67 +236,81 @@ data_outgoing.exclude = display_outgoing.exclude
 -- UI
 
 do
-    local button = ui.button
-    local check = ui.check
-    local edit = ui.edit
-    local location = ui.location
-    local radio = ui.radio
-    local size = ui.size
-    local text = ui.text
+    local edit_state = ui.edit_state
 
-    scanner.dashboard = function(pos)
+    local edit_value = edit_state()
+    local edit_incoming = edit_state()
+    local edit_outgoing = edit_state()
+
+    edit_value.text = display.value
+    edit_incoming.text = display_incoming.pattern
+    edit_outgoing.text = display_outgoing.pattern
+
+    scanner.dashboard = function(layout, pos)
         local active = scanner.running()
 
-        pos(10, 50)
-        text('[Scanning]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
+        pos(0, 50)
+        layout:label('[Scanning]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
 
-        pos(20, 30)
-        text('Scan for value')
-        pos(100, -3)
-        size(250, 23)
-        display.value = edit('pv_scan_value', display.value)
-        pos(0, 3)
+        pos(10, 30)
+        layout:label('Scan for value')
+        pos(90, -4)
+        layout:size(250, 23)
+        layout:edit(edit_value)
+        display.value = edit_value.text
+        pos(0, 4)
 
-        pos(20, 30)
-        text('Type')
-        pos(100, 0)
-        if radio('pv_scan_type_int', 'Integer', display.type == 'int') then
+        pos(10, 30)
+        layout:label('Type')
+        pos(90, 0)
+        layout:width(70)
+        if layout:radio('scanner_value_int', 'Integer', display.type == 'int') then
             display.type = 'int'
         end
-        pos(180, 0)
-        if radio('pv_scan_type_string', 'String', display.type == 'string') then
+        pos(170, 0)
+        layout:width(70)
+        if layout:radio('scanner_value_string', 'String', display.type == 'string') then
             display.type = 'string'
         end
-        pos(260, 0)
-        if radio('pv_scan_type_hex', 'Hex array', display.type == 'hex') then
+        pos(250, 0)
+        layout:width(70)
+        if layout:radio('scanner_value_hex', 'Hex array', display.type == 'hex') then
             display.type = 'hex'
         end
 
-        pos(20, 30)
-        text('Incoming IDs')
-        pos(190, 0)
-        text('Outgoing IDs')
+        pos(10, 30)
+        layout:label('Incoming IDs')
+        pos(180, 0)
+        layout:label('Outgoing IDs')
 
-        pos(20, 20)
-        display_incoming.pattern = edit('pv_scan_pattern_incoming', display_incoming.pattern)
-        pos(190, 0)
-        display_outgoing.pattern = edit('pv_scan_pattern_outgoing', display_outgoing.pattern)
+        pos(10, 20)
+        layout:edit(edit_incoming)
+        display_incoming.pattern = edit_incoming.text
+        pos(180, 0)
+        layout:edit(edit_outgoing)
+        display_outgoing.pattern = edit_outgoing.text
 
-        pos(18, 30)
-        if check('pv_scan_exclude_incoming', 'Exclude IDs', display_incoming.exclude) then
+        pos(10, 30)
+        layout:width(160)
+        if layout:check('scanner_incoming', 'Exclude IDs', display_incoming.exclude) then
             display_incoming.exclude = not display_incoming.exclude
         end
-        pos(188, 0)
-        if check('pv_scan_exclude_outgoing', 'Exclude IDs', display_outgoing.exclude) then
+        pos(180, 0)
+        layout:width(160)
+        if layout:check('scanner_outgoing', 'Exclude IDs', display_outgoing.exclude) then
             display_outgoing.exclude = not display_outgoing.exclude
         end
 
-        pos(20, 20)
-        if button('pv_scan_start', active and 'Restart scanner' or 'Start scanner', { enabled = scanner.valid() }) then
+        pos(10, 20)
+        layout:width(90)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button(active and 'Restart scanner' or 'Start scanner') and scanner.valid() then
             scanner.start()
         end
-        pos(120, 0)
-        if button('pv_scan_stop', 'Stop scanner', { enabled = active }) then
+        pos(110, 0)
+        layout:width(90)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Stop scanner') and active then
             scanner.stop()
         end
     end
@@ -305,15 +319,21 @@ do
         title = 'Packet Viewer Scanner',
     })
 
-    scanner.window = function()
+    scanner.window = function(layout)
         for i = 1, #scanned do
-            location(10, 20 * (i - 1) + 10)
-            text(scanned[i])
+            layout:move(0, 20 * (i - 1))
+            -- TODO: Remove specific width once non-wrapping layout is enabled
+            layout:width(10000)
+            layout:label(scanned[i])
         end
     end
 
-    scanner.button = function()
-        return 'PV - Scanning', 85
+    scanner.button_caption = function()
+        return 'PV - Scanning'
+    end
+
+    scanner.button_size = function()
+        return 85
     end
 
     scanner.save = function()

@@ -14,12 +14,12 @@ do
     local string_format = string.format
 
     for i = 0x00, 0xFF do
-        hex_raw[i] = string_format('%X', i)
         hex_space[i] = string_format('%2X', i)
         hex_zero[i] = string_format('%.2X', i)
     end
 
     for i = 0x000, 0x200 do
+        hex_raw[i] = string_format('%X', i)
         hex_zero_3[i] = string_format('%.3X', i)
     end
 end

@@ -45,29 +45,31 @@ end
 -- UI
 
 do
-    local location = ui.location
-
     dashboard.state = init(display, {
         title = 'Packet Viewer',
     })
 
-    dashboard.window = function()
+    dashboard.window = function(layout)
         local y_current = 0
         local pos = function(x, y_off)
             y_current = y_current + y_off
-            location(x, y_current)
+            layout:move(x, y_current)
         end
 
         for _, component in pairs(components) do
             local render_dashboard = component.dashboard
             if render_dashboard then
-                render_dashboard(pos)
+                render_dashboard(layout, pos)
             end
         end
     end
 
-    dashboard.button = function()
-        return 'Packet Viewer', 89
+    dashboard.button_caption = function()
+        return 'Packet Viewer'
+    end
+
+    dashboard.button_size = function()
+        return 89
     end
 
     dashboard.save = function()
