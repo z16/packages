@@ -1,13 +1,12 @@
 local settings = require('settings')
-local ui = require('core.ui')
 
 local state = require('pv.state')
 
 local defaults = {
     visible = false,
-    x = 0,
-    y = 0,
-    width = 360,
+    x = 5,
+    y = 21,
+    width = 355,
     height = 500,
 }
 

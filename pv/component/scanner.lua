@@ -15,8 +15,8 @@ do
     local defaults = {
         visible = false,
         x = 370,
-        y = 0,
-        width = 500,
+        y = 21,
+        width = 480,
         height = 340,
         value = '',
         type = 'int',

@@ -13,7 +13,7 @@ do
     local defaults = {
         visible = false,
         x = 370,
-        y = 0,
+        y = 21,
         width = 960,
         height = 340,
         incoming = {

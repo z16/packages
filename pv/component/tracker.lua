@@ -21,9 +21,9 @@ do
     local defaults = {
         visible = false,
         x = 370,
-        y = 0,
+        y = 21,
         width = 480,
-        height = 460,
+        height = 500,
         incoming = {
             pattern = '',
             exclude = false,

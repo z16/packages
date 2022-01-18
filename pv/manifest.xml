@@ -1,6 +1,6 @@
 <package>
   <name>pv</name>
-  <version>4.2.0.2</version>
+  <version>4.2.1.0</version>
   <type>addon</type>
   <dependencies>
     <dependency>entities</dependency>

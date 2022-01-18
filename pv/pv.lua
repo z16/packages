@@ -62,7 +62,6 @@ local render_button = function(component, layout, offset)
     if layout:button(component_button_caption(), visible_old) then
         local visible_new = not visible_old
         component.show(visible_new)
-        -- component.state.visible = visible_new
     end
 
     return size
@@ -99,7 +98,8 @@ do
         end)
 
         for _, component in pairs(components) do
-            if watch(component.state) == state_changed then
+            local component_state = component.state
+            if component_state and watch(component_state) == state_changed then
                 component.save()
             end
         end

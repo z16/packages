@@ -14,28 +14,20 @@ do
     init = function(options, state_base)
         local state = ui_window_state()
 
+        state.style = 'standard'
+        state.closeable = true
+        state.resizable = true
+
+        state.position = options.position
+        state.size = options.size
+
         for key, value in pairs(state_base) do
             state[key] = value
         end
 
-        state.closeable = true
-        state.style = 'standard'
-
-        local position = {
-            x = options.x,
-            y = options.y,
-        }
-        local size = {
-            width = options.width,
-            height = options.height,
-        }
-
-        state.position = position
-        state.size = size
-
         state_cache[state.title] = {
-            position = position,
-            size = size,
+            position = state.position,
+            size = state.size,
             changed = false,
             compared = 0,
             options = options,
@@ -58,8 +50,8 @@ do
             return same
         end
 
-        cached.position = new_position
-        cached.size = new_size
+        cached.position = state.position
+        cached.size = state.size
 
         return same
     end
@@ -89,10 +81,8 @@ do
         cached.compared = 0
 
         local options = cached.options
-        options.position.x = cached.position.x
-        options.position.y = cached.position.y
-        options.size.width = cached.size.width
-        options.size.height = cached.size.height
+        options.position = cached.position
+        options.size = cached.size
 
         return state_changed
     end
