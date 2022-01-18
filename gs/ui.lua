@@ -194,7 +194,7 @@ do
     local sets_map
     local sets_path
 
-    local user_path = windower.user_path
+    local user_path_prefix = windower.user_path .. '\\'
 
     local visible_explorer = true
 
@@ -611,7 +611,7 @@ do
         load_file = function(path)
             local sets_state = state[path]
 
-            local sets_file = file_new(user_path .. '\\' .. path)
+            local sets_file = file_new(user_path_prefix .. path)
             sets_state.sets, sets_state.sets_map, sets_state.sets_path = parse_sets(sets_file)
             local sets_modified_time = sets_file:info().ftLastWriteTime.time
             sets_state.modified_time = sets_modified_time
@@ -665,7 +665,7 @@ do
 
         save_file = function(sets_state)
             local path = sets_state.sets_path
-            local sets_file = file_new(user_path .. '\\' .. path)
+            local sets_file = file_new(user_path_prefix .. path)
             sets_file:write('return ' .. ('\n'):join(generate_container(sets_state.sets, '', sets_state.sets_map, sets_state.container_keys)) .. '\n')
             local sets_modified_time = sets_file:info().ftLastWriteTime.time
             sets_state.modified_time = sets_modified_time
@@ -865,7 +865,7 @@ do
                 while true do
                     files = {}
                     files_count = 0
-                    parse_dir(user_path .. '\\', '')
+                    parse_dir(user_path_prefix, '')
                     coroutine_sleep(1)
                 end
             end)
@@ -876,7 +876,7 @@ do
         local invalid_message = nil
 
         local write_file = function(path)
-            local new_file = file_new(user_path .. '\\' .. path .. '\\sets.lua')
+            local new_file = file_new(user_path_prefix .. path .. '\\sets.lua')
             local success = pcall(function()
                 if new_file:exists() then
                     invalid_message = 'File already exists'
