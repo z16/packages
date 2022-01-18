@@ -164,6 +164,11 @@ do
         if layout:button('Stop browser') and active then
             browser.stop()
         end
+        pos(210, 0)
+        layout:width(90)
+        if layout:button('Paste') then
+            edit_address.text = clipboard.get()
+        end
     end
 
     browser.state = init(display, {
