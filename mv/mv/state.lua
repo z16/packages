@@ -1,54 +1,57 @@
+local ui = require('core.ui')
+
+local ui_window_state = ui.window_state
+
+local state_unchanged = {}
+local state_changing = {}
+local state_changed = {}
+
 local watch
 local init
 do
     local state_cache = {}
 
-    init = function(options, state)
-        state.closable = true
-        state.style = 'normal'
+    init = function(options, state_base)
+        local state = ui_window_state()
 
-        local x = options.x
-        local y = options.y
-        local width = options.width
-        local height = options.height
+        state.style = 'standard'
+        state.closeable = true
+        state.resizable = true
 
-        state.x = x
-        state.y = y
-        state.width = width
-        state.height = height
+        state.position = options.position
+        state.size = options.size
+
+        for key, value in pairs(state_base) do
+            state[key] = value
+        end
 
         state_cache[state.title] = {
-            x = x,
-            y = y,
-            width = width,
-            height = height,
+            position = state.position,
+            size = state.size,
             changed = false,
             compared = 0,
             options = options,
         }
+
         return state
     end
 
     local update_cache = function(cached, state)
-        local new_x = state.x
-        local new_y = state.y
-        local new_width = state.width
-        local new_height = state.height
+        local new_position = state.position
+        local new_size = state.size
 
         local same =
-            cached.x == new_x and
-            cached.y == new_y and
-            cached.width == new_width and
-            cached.height == new_height
+            cached.position.x == new_position.x and
+            cached.position.y == new_position.y and
+            cached.size.width == new_size.width and
+            cached.size.height == new_size.height
 
         if same then
             return same
         end
 
-        cached.x = new_x
-        cached.y = new_y
-        cached.width = new_width
-        cached.height = new_height
+        cached.position = state.position
+        cached.size = state.size
 
         return same
     end
@@ -61,33 +64,34 @@ do
         if not same then
             cached.changed = true
             cached.compared = 0
-            return 'changing'
+            return state_changing
         end
 
         if not cached.changed then
-            return 'unchanged'
+            return state_unchanged
         end
 
         local compare_count = cached.compared
         if compare_count < 10 then
             cached.compared = compare_count + 1
-            return 'changing'
+            return state_changing
         end
 
         cached.changed = false
         cached.compared = 0
 
         local options = cached.options
-        options.x = cached.x
-        options.y = cached.y
-        options.width = cached.width
-        options.height = cached.height
+        options.position = cached.position
+        options.size = cached.size
 
-        return 'changed'
+        return state_changed
     end
 end
 
 return {
     init = init,
     watch = watch,
+    unchanged = state_unchanged,
+    changing = state_changing,
+    changed = state_changed,
 }

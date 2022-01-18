@@ -29,8 +29,7 @@ for _, component in pairs(components) do
 end
 
 local watch = state.watch
-local button = ui.button
-local location = ui.location
+local state_changed = state.changed
 local window = ui.window
 
 local render_window = function(component)
@@ -38,45 +37,70 @@ local render_window = function(component)
         return
     end
 
-    local closed
-    component.state, closed = window('mv_' .. component.name .. '_window', component.state, component.window)
+    component.state.visible = true
+    window(component.state, component.window)
 
-    if closed then
+    if not component.state.visible then
         component.show(false)
     end
 end
 
-local render_button = function(component, x, y)
-    local component_button = component.button
-    if not component_button then
+local render_button = function(component, layout, offset)
+    local component_button_caption = component.button_caption
+    local component_button_size = component.button_size
+    if not (component_button_caption and component_button_size) then
         return 0
     end
 
-    location(x, y)
-    local caption, size = component_button()
-    if button('mv_' .. component.name .. '_window_toggle', caption) then
-        component.show(not component.visible())
+    layout:move(offset, 0)
+
+    local size = component_button_size()
+    layout:width(size)
+
+    local visible_old = component.visible()
+    if layout:button(component_button_caption(), visible_old) then
+        local visible_new = not visible_old
+        component.show(visible_new)
     end
+
     return size
 end
 
-ui.display(function()
+do
+    local width = 0
     for _, component in pairs(components) do
-        render_window(component)
+        local component_button_size = component.button_size
+        if component_button_size then
+            width = width + component_button_size()
+        end
     end
 
-    do
-        local x = 400
-        local y = windower.settings.ui_size.height - 18
+    local button_panel = ui.window_state()
+    button_panel.x = 400
+    button_panel.style = 'chromeless'
+    button_panel.visible = true
+    button_panel.width = width
+    button_panel.height = 18
+
+    ui.display(function()
+        for _, component in pairs(components) do
+            render_window(component)
+        end
+
+        button_panel.y = windower.settings.ui_size.height - 18
+        window(button_panel, function(layout)
+            local offset = 0
+
+            for _, component in pairs(components) do
+                offset = offset + render_button(component, layout, offset)
+            end
+        end)
 
         for _, component in pairs(components) do
-            x = x + render_button(component, x, y)
+            local component_state = component.state
+            if component_state and watch(component_state) == state_changed then
+                component.save()
+            end
         end
-    end
-
-    for _, component in pairs(components) do
-        if watch(component.state) == 'changed' then
-            component.save()
-        end
-    end
-end)
+    end)
+end

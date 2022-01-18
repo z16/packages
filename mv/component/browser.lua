@@ -6,6 +6,7 @@ local settings = require('settings')
 local table = require('table')
 local ui = require('core.ui')
 local world = require('world')
+local clipboard = require('clipboard')
 
 local state = require('mv.state')
 local mv = require('mv.mv')
@@ -14,10 +15,14 @@ local display
 do
     local defaults = {
         visible = false,
-        x = 370,
-        y = 0,
-        width = 600,
-        height = 340,
+        position = {
+            x = 370,
+            y = 21,
+        },
+        size = {
+            width = 610,
+            height = 490,
+        },
         address = '',
         active = false,
     }
@@ -125,31 +130,38 @@ mv.command:register('browse', browse_command, '<address:integer>')
 -- UI
 
 do
-    local button = ui.button
-    local edit = ui.edit
-    local location = ui.location
-    local text = ui.text
+    local edit_state = ui.edit_state
 
-    browser.dashboard = function(pos)
+    local edit_address = edit_state()
+
+    edit_address.text = display.address
+
+    browser.dashboard = function(layout, pos)
         local active = browser.running()
 
-        pos(10, 10)
-        text('[Browsing]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
+        pos(0, 0)
+        layout:label('[Browsing]{bold 16px} ' .. (active and '[on]{green}' or '[off]{red}'))
 
-        pos(20, 32)
-        text('Address')
+        pos(10, 32)
+        layout:label('Address')
 
-        pos(70, -2)
-        ui.size(280, 23)
-        display.address = edit('mv_browse_address', display.address)
+        pos(60, -4)
+        layout:size(280, 23)
+        layout:edit(edit_address)
+        display.address = edit_address.text
+        pos(0, 4)
 
-        pos(20, 30)
+        pos(10, 30)
         local value = browser.get_value()
-        if button('mv_browse_start', active and 'Restart browser' or 'Start browser', { enabled = value ~= nil }) then
+        layout:width(90)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button(active and 'Restart browser' or 'Start browser') and value ~= nil then
             browser.start(value)
         end
-        pos(120, 0)
-        if button('mv_browse_stop', 'Stop browser', { enabled = active }) then
+        pos(110, 0)
+        layout:width(90)
+        -- TODO: Move "and" clause to enabled property
+        if layout:button('Stop browser') and active then
             browser.stop()
         end
     end
@@ -218,7 +230,7 @@ do
             })
         end
 
-        browser.window = function()
+        browser.window = function(layout)
             local address = data.address
             if not address then
                 return
@@ -227,7 +239,7 @@ do
             if type(address) == 'string' then
                 local ok, result = pcall(getters[address])
                 if not ok or result == nil then
-                    text('Invalid expression: ' .. address .. ' (' .. tostring(result) .. ')')
+                    layout:label('Invalid expression: ' .. address .. ' (' .. tostring(result) .. ')')
                     return
                 end
 
@@ -248,20 +260,24 @@ do
                 lines:add(hex_address(line_address) .. ' | ' .. table_concat(line, ' ', 0x01, 0x10) .. ' | ' .. table_concat(chars, '', 0x01, 0x10))
             end
 
-            text('[' .. table_concat(lines, '\n') .. ']{Consolas 12px}')
+            layout:label('[' .. table_concat(lines, '\n') .. ']{Consolas 12px}')
 
-            location(525, 36)
+            layout:move(525, 36)
             for i = 1, #offsets do
                 local offset = offsets[i]
-                if button(offset.name, offset.label) then
+                if layout:button(offset.label) then
                     data.address = address + offset.value
                 end
             end
         end
     end
 
-    browser.button = function()
-        return 'MV - Browser', 85
+    browser.button_caption = function()
+        return 'MV - Browser'
+    end
+
+    browser.button_size = function()
+        return 85
     end
 
     browser.save = function()

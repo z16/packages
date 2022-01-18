@@ -11,13 +11,17 @@ local mv = require('mv.mv')
 local display
 do
     local defaults = {
+        visible = false,
         signature = '',
     }
 
     display = settings.load(defaults, 'scanner', true)
 end
 
-local data = {}
+local data = {
+    address = nil,
+    address_changed = false,
+}
 
 local tonumber = tonumber
 local save = settings.save
@@ -77,6 +81,7 @@ do
             local ptr = scanner_scan(signature, module)
             if ptr ~= nil then
                 data.address = string_format('%.8X', tonumber(ffi_cast(int_ptr, ptr)))
+                data.address_changed = true
                 break
             end
         end
@@ -100,45 +105,54 @@ mv.command:register('scan', scan_command, '<signature:text>')
 -- UI
 
 do
-    local button = ui.button
-    local edit = ui.edit
-    local size = ui.size
-    local text = ui.text
+    local edit_state = ui.edit_state
 
-    scanner.dashboard = function(pos)
-        pos(10, 50)
-        text('[Scanning]{bold 16px}')
-        
-        pos(20, 32)
-        text('Signature')
+    local edit_signature = edit_state()
+    local edit_address = edit_state()
 
-        pos(78, -2)
-        size(272, 23)
-        display.signature = edit('mv_scan_signature', display.signature)
+    edit_signature.text = display.signature
+    edit_address.text = ''
 
-        pos(20, 30)
-        if button('mv_scan_start', 'Scan', { enabled = scanner.valid() }) then
+    scanner.dashboard = function(layout, pos)
+        pos(0, 40)
+        layout:label('[Scanning]{bold 16px}')
+
+        pos(10, 32)
+        layout:label('Signature')
+
+        pos(68, -4)
+        layout:size(272, 23)
+        layout:edit(edit_signature)
+        display.signature = edit_signature.text
+        pos(0, 4)
+
+        pos(10, 30)
+        layout:width(90)
+        if layout:button('Scan') and scanner.valid() then
             scanner.start()
         end
 
         if data.address then
-            pos(105, 2)
-            text('Result:')
+            pos(105, 5)
+            layout:label('Result:')
 
-            pos(146, -2)
-            size(70, 23)
-            edit('mv_scan_result', data.address, { enabled = false })
+            pos(146, -4)
+            layout:size(70, 23)
+            -- TODO: Disabled edit box
+            if data.address_changed then
+                edit_address.text = data.address
+                data.address_changed = false
+            end
+            layout:edit(edit_address)
+            pos(0, 4)
 
-            pos(220, 0)
-            if button('mv_scan_result_copy', 'Copy') then
+            pos(220, -5)
+            layout:width(90)
+            if layout:button('Copy') then
                 clipboard.set(data.address)
             end
         end
     end
-
-    scanner.state = init(display, {
-        title = 'Memory Viewer Scanner',
-    })
 
     scanner.window = function()
     end

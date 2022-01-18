@@ -1,14 +1,17 @@
 local settings = require('settings')
-local ui = require('core.ui')
 
 local state = require('mv.state')
 
 local defaults = {
     visible = false,
-    x = 0,
-    y = 526,
-    width = 360,
-    height = 210,
+    position = {
+        x = 5,
+        y = 547,
+    },
+    size = {
+        width = 355,
+        height = 474,
+    },
 }
 
 local display = settings.load(defaults, 'dashboard', true)
@@ -45,29 +48,31 @@ end
 -- UI
 
 do
-    local location = ui.location
-
     dashboard.state = init(display, {
         title = 'Memory Viewer',
     })
 
-    dashboard.window = function()
+    dashboard.window = function(layout)
         local y_current = 0
         local pos = function(x, y_off)
             y_current = y_current + y_off
-            location(x, y_current)
+            layout:move(x, y_current)
         end
 
         for _, component in pairs(components) do
             local render_dashboard = component.dashboard
             if render_dashboard then
-                render_dashboard(pos)
+                render_dashboard(layout, pos)
             end
         end
     end
 
-    dashboard.button = function()
-        return 'Memory Viewer', 96
+    dashboard.button_caption = function()
+        return 'Memory Viewer'
+    end
+
+    dashboard.button_size = function()
+        return 96
     end
 
     dashboard.save = function()
