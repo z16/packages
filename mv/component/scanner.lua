@@ -138,7 +138,8 @@ do
 
             pos(146, -4)
             layout:size(70, 23)
-            -- TODO: Disabled edit box
+            -- TODO
+            -- layout:enable(false)
             if data.address_changed then
                 edit_address.text = data.address
                 data.address_changed = false

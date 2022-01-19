@@ -154,13 +154,17 @@ do
         pos(10, 30)
         local value = browser.get_value()
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(value ~= nil)
+        -- if layout:button(active and 'Restart browser' or 'Start browser') then
         if layout:button(active and 'Restart browser' or 'Start browser') and value ~= nil then
             browser.start(value)
         end
         pos(110, 0)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(active)
+        -- if layout:button('Stop browser') then
         if layout:button('Stop browser') and active then
             browser.stop()
         end
