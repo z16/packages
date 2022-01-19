@@ -12,10 +12,14 @@ local display
 do
     local defaults = {
         visible = false,
-        x = 370,
-        y = 21,
-        width = 960,
-        height = 340,
+        position = {
+            x = 370,
+            y = 21,
+        },
+        size = {
+            width = 960,
+            height = 340,
+        },
         incoming = {
             pattern = '',
             exclude = false,
@@ -184,13 +188,17 @@ do
 
         pos(10, 20)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(logger.valid())
+        -- if layout:button(active and 'Restart logger' or 'Start logger') then
         if layout:button(active and 'Restart logger' or 'Start logger') and logger.valid() then
             logger.start()
         end
         pos(110, 0)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(active)
+        -- if layout:button('Stop logger') then
         if layout:button('Stop logger') and active then
             logger.stop()
         end

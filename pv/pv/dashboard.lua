@@ -4,10 +4,14 @@ local state = require('pv.state')
 
 local defaults = {
     visible = false,
-    x = 5,
-    y = 21,
-    width = 355,
-    height = 500,
+    position = {
+        x = 5,
+        y = 21,
+    },
+    size = {
+        width = 355,
+        height = 500,
+    },
 }
 
 local display = settings.load(defaults, 'dashboard', true)

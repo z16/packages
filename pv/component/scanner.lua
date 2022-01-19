@@ -14,10 +14,14 @@ local display
 do
     local defaults = {
         visible = false,
-        x = 370,
-        y = 21,
-        width = 480,
-        height = 340,
+        position = {
+            x = 370,
+            y = 21,
+        },
+        size = {
+            width = 480,
+            height = 340,
+        },
         value = '',
         type = 'int',
         length = 1,
@@ -303,13 +307,17 @@ do
 
         pos(10, 20)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(scanner.valid())
+        -- if layout:button(active and 'Restart scanner' or 'Start scanner') then
         if layout:button(active and 'Restart scanner' or 'Start scanner') and scanner.valid() then
             scanner.start()
         end
         pos(110, 0)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(active)
+        -- if layout:button('Stop scanner') then
         if layout:button('Stop scanner') and active then
             scanner.stop()
         end

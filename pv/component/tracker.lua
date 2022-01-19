@@ -20,10 +20,14 @@ local display
 do
     local defaults = {
         visible = false,
-        x = 370,
-        y = 21,
-        width = 480,
-        height = 500,
+        position = {
+            x = 370,
+            y = 21,
+        },
+        size = {
+            width = 480,
+            height = 500,
+        },
         incoming = {
             pattern = '',
             exclude = false,
@@ -494,13 +498,17 @@ do
 
         pos(10, 20)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(tracker.valid())
+        -- if layout:button(active and 'Restart tracker' or 'Start tracker') then
         if layout:button(active and 'Restart tracker' or 'Start tracker') and tracker.valid() then
             tracker.start()
         end
         pos(110, 0)
         layout:width(90)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(active)
+        -- if layout:button('Stop tracker') then
         if layout:button('Stop tracker') and active then
             tracker.stop()
         end
@@ -518,7 +526,9 @@ do
         local index = display_index or tracked_count
 
         layout:move(0, 0)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(index > 1)
+        -- if layout:button('Previous') then
         if layout:button('Previous') and index > 1 then
             display_index = index - 1
         end
@@ -527,13 +537,17 @@ do
         layout:label('Showing ' .. (display_index and tostring(index) .. '/' or 'latest of ') .. tostring(tracked_count))
 
         layout:move(290, 0)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(index < tracked_count)
+        -- if layout:button('Next') then
         if layout:button('Next') and index < tracked_count then
             display_index = index + 1
         end
 
         layout:move(385, 0)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(display_index ~= nil)
+        -- if layout:button('Show latest') then
         if layout:button('Show latest') and display_index ~= nil then
             display_index = nil
         end
@@ -550,13 +564,17 @@ do
         layout:label('[' .. os_date('%H:%M:%S', info.timestamp) .. ' | ' .. info.direction .. ' 0x' .. hex_zero_3[info.id] .. ' | 0x' .. hex_raw[info[mode .. '_size']] .. ' | ' .. info.sequence_counter .. (info.injected and ' | injected' or '') .. (info.blocked and ' | blocked' or '') .. ']{Consolas}')
 
         layout:move(0, 70)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(mode ~= 'original')
+        -- if layout:button('Original') then
         if layout:button('Original') and mode ~= 'original' then
             mode = 'original'
         end
 
         layout:move(90, 70)
-        -- TODO: Move "and" clause to enabled property
+        -- TODO
+        -- layout:enable(mode ~= 'modified')
+        -- if layout:button('Modified') then
         if layout:button('Modified') and mode ~= 'modified' then
             mode = 'modified'
         end
